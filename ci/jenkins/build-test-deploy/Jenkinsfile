@@ -39,7 +39,34 @@ pipeline {
         }
       }
     }
-  } 
+    stage('Upload OPERA PCM lambdas function zip files to Artifactory-FN') {
+      steps {
+        script {
+          rtServer (
+            id: 'ARTIFACTORY_FN_SERVER',
+            url: params.ART_URL,
+            credentialsId: params.ART_CREDENTIALS,
+            timeout: 300
+          )
+          echo "Publishing lambda functions artifacts to ${params.ART_PATH}/${env.RELEASE}"
+
+          rtUpload (
+            serverId: "ARTIFACTORY_SERVER",
+            spec:
+            """{
+              "files": [
+                {
+                 "pattern": "*.zip",
+                 "target": "${params.ART_PATH}/${env.RELEASE}/"
+                }
+              ]
+            }"""
+          )
+          //sh "rm -f ${TAR_FILE_NAME} ${TAR_GZ_FILE_NAME}"
+        }
+      }
+    }
+  }
   post {
     always {
       echo "Cleaning up workspace"
@@ -69,30 +96,30 @@ pipeline {
       //   ]
       // )
     }
-    success {
-      echo 'I succeeeded!'
-      echo "Configuring artifactory"
-      unstash 'lambda_packages'
-      rtServer (
-        id: "ARTIFACTORY_SERVER",
-        url: params.ART_URL,
-        credentialsId: params.ART_CREDENTIALS,
-        timeout: 300
-      )
-      echo "Publishing artifacts to ${params.ART_PATH}/${env.RELEASE}"
-      rtUpload (
-        serverId: "ARTIFACTORY_SERVER",
-        spec:
-          """{
-            "files": [
-              {
-                "pattern": "*.zip",
-                "target": "${params.ART_PATH}/${env.RELEASE}/"
-              }
-           ]
-          }"""
-      )
-    }
+ //   success {
+ //     echo 'I succeeeded!'
+ //     echo "Configuring artifactory"
+ //     unstash 'lambda_packages'
+ //     rtServer (
+ //       id: "ARTIFACTORY_SERVER",
+ //       url: params.ART_URL,
+ //       credentialsId: params.ART_CREDENTIALS,
+ //       timeout: 300
+ //     )
+ //     echo "Publishing artifacts to ${params.ART_PATH}/${env.RELEASE}"
+ //     rtUpload (
+ //       serverId: "ARTIFACTORY_SERVER",
+ //       spec:
+ //         """{
+ //           "files": [
+ //             {
+ //               "pattern": "*.zip",
+ //               "target": "${params.ART_PATH}/${env.RELEASE}/"
+ //            }
+ //          ]
+ //         }"""
+ //     )
+ //   }
     unstable {
       echo 'I am unstable :/'
     }
