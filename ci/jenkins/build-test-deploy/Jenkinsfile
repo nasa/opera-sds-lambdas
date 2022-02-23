@@ -1,0 +1,111 @@
+#!/usr/bin/env groovy
+
+pipeline {
+  options {
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '3'))
+  }
+  agent any
+  environment {
+    RELEASE = getRelease()
+  }
+  parameters {
+    string(name: 'ART_URL', defaultValue: 'https://cae-artifactory.jpl.nasa.gov/artifactory',
+           description: 'Artifactory URL.')
+    string(name: 'ART_PATH', defaultValue: 'general-develop/gov/nasa/jpl/opera/sds/pcm/lambda/',
+           description: 'Root Artifactory path to publish artifacts to.')
+    credentials(name: 'ART_CREDENTIALS',
+                description: 'ID of credentials containing Artifactory encrypted password that will allow for Artifactory uploads/downloads.',
+                credentialType: 'com.cloudbees.plugins.credentials.impl.StringCredentialsImpl',
+                required: true)
+    credentials(name: 'GIT_OAUTH_TOKEN',
+                description: 'ID of Github OAuth token.',
+                credentialType: 'com.cloudbees.plugins.credentials.impl.StringCredentialsImpl',
+                required: true)
+  }
+  stages {
+    stage("Build CNM-R Lambda Package") {
+      agent any
+      steps {
+        echo "Build CNM-R Lambda Package"
+        echo "WORKSPACE: ${WORKSPACE}"
+        withCredentials([string(credentialsId: params.GIT_OAUTH_TOKEN,
+                                variable: 'git_oauth_token')]) {
+          sh label: "Build CNM-R Lambda Package", script: """
+            GIT_OAUTH_TOKEN=$git_oauth_token
+            bash ci/jenkins/build-test-deploy/build.sh
+          """
+          stash includes: 'lambda_packages/*.zip', name: 'lambda_packages'
+        }
+      }
+    }
+  } 
+  post {
+    always {
+      echo "Cleaning up workspace"
+      deleteDir()
+
+      // echo "Publishing xUnit test result report"
+      // unstash 'pytest_files'
+      // xunit (
+      //   thresholds: [
+      //     skipped (
+      //       unstableThreshold: '0',
+      //       unstableNewThreshold: '0'
+      //     ),
+      //     failed (
+      //       unstableThreshold: '0',
+      //       unstableNewThreshold: '0'
+      //     )
+      //   ],
+      //   tools: [
+      //     JUnit (
+      //       pattern: '**/*.xml',
+      //       skipNoTestFiles: false,
+      //       failIfNotNew: true,
+      //       deleteOutputFiles: true,
+      //       stopProcessingIfError: true
+      //     )
+      //   ]
+      // )
+    }
+    success {
+      echo 'I succeeeded!'
+      echo "Configuring artifactory"
+      unstash 'lambda_packages'
+      rtServer (
+        id: "ARTIFACTORY_SERVER",
+        url: params.ART_URL,
+        credentialsId: params.ART_CREDENTIALS,
+        timeout: 300
+      )
+      echo "Publishing artifacts to ${params.ART_PATH}/${env.RELEASE}"
+      rtUpload (
+        serverId: "ARTIFACTORY_SERVER",
+        spec:
+          """{
+            "files": [
+              {
+                "pattern": "*.zip",
+                "target": "${params.ART_PATH}/${env.RELEASE}/"
+              }
+           ]
+          }"""
+      )
+    }
+    unstable {
+      echo 'I am unstable :/'
+    }
+    failure {
+      echo 'I failed :('
+    }
+    changed {
+      echo 'Things were different before...'
+    }
+  }
+}
+
+def getRelease() {
+  def git_branch = "${env.GIT_BRANCH}"
+  return git_branch.tokenize('/').last()
+}
