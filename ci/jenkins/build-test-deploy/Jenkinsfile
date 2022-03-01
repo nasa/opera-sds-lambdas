@@ -10,7 +10,7 @@ pipeline {
     RELEASE = getRelease()
   }
   parameters {
-    string(name: 'ART_URL', defaultValue: 'https://cae-artifactory.jpl.nasa.gov/artifactory',
+    string(name: 'ART_URL', defaultValue: 'https://artifactory-fn.jpl.nasa.gov/artifactory',
            description: 'Artifactory URL.')
     string(name: 'ART_PATH', defaultValue: 'general-develop/gov/nasa/jpl/opera/sds/pcm/lambda/',
            description: 'Root Artifactory path to publish artifacts to.')
