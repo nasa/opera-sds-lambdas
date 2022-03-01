@@ -39,37 +39,7 @@ pipeline {
         }
       }
     }
-
-    /*
-    stage('Upload OPERA PCM lambdas function zip files to Artifactory-FN') {
-      steps {
-        script {
-          rtServer (
-            id: 'ARTIFACTORY_FN_SERVER',
-            url: params.ART_URL,
-            credentialsId: params.ART_CREDENTIALS,
-            timeout: 300
-          )
-          echo "Publishing lambda functions artifacts to ${params.ART_PATH}/${env.RELEASE}"
-
-          rtUpload (
-            serverId: "ARTIFACTORY_SERVER",
-            spec:
-            """{
-              "files": [
-                {
-                 "pattern": "*.zip",
-                 "target": "${params.ART_PATH}/${env.RELEASE}/"
-                }
-              ]
-            }"""
-          )
-          //sh "rm -f ${TAR_FILE_NAME} ${TAR_GZ_FILE_NAME}"
-        }
-      }
-    }
-    */
-  }
+  } 
   post {
     always {
       echo "Cleaning up workspace"
@@ -118,7 +88,7 @@ pipeline {
               {
                 "pattern": "*.zip",
                 "target": "${params.ART_PATH}/${env.RELEASE}/"
-             }
+              }
            ]
           }"""
       )

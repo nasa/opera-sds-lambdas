@@ -49,3 +49,4 @@ popd
 pushd ${WORKSPACE}/lambdas/data-subscriber
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
+
