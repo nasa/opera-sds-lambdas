@@ -21,7 +21,7 @@ class Package(setuptools.Command):
     """Package Code and Dependencies into wheelhouse"""
     description = "Run wheels for dependencies and submodules dependencies"
 
-    ARCHIVE_NAME = "lambda-data-subscriber-handler"
+    ARCHIVE_NAME = "lambda-data-subscriber-query-handler"
 
     user_options = [
         ('version=', 'v', 'version release'),
@@ -198,7 +198,7 @@ class Package(setuptools.Command):
 
 
 setuptools.setup(
-    name="lambda-data-subscriber-handler",
+    name="lambda-data-subscriber-query-handler",
     author="PCM",
     description="Lambda package for submitting jobs that perform data subscribing to DAACs",
     packages=setuptools.find_packages(),

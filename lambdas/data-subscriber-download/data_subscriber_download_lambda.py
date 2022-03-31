@@ -106,8 +106,8 @@ def lambda_handler(event, context):
         "start_time": convert_datetime(start_time),
         "end_time": convert_datetime(end_time)
     }
-    tags = ["data-subscriber-timer"]
-    job_name = "data-subscriber-timer-{}_{}".format(convert_datetime(start_time, JOB_NAME_DATETIME_FORMAT),
+    tags = ["data-subscriber-download-timer"]
+    job_name = "data-subscriber-download-timer-{}_{}".format(convert_datetime(start_time, JOB_NAME_DATETIME_FORMAT),
                                        convert_datetime(end_time, JOB_NAME_DATETIME_FORMAT))
     # submit mozart job
     submit_job(job_name, job_spec, job_params, queue, tags)
