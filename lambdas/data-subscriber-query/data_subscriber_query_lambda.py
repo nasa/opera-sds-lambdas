@@ -1,10 +1,11 @@
 from __future__ import print_function
 
-import os
 import json
-import requests
+import os
+import re
+from datetime import datetime
 
-from datetime import datetime, timedelta
+import requests
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
@@ -74,15 +75,15 @@ def lambda_handler(event, context):
     print("Got context: %s" % context)
     print("os.environ: %s" % os.environ)
 
-    minutes = os.environ['MINUTES']
+    minutes = re.search(r'\d+', os.environ['MINUTES']).group()
 
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']
     queue = os.environ['JOB_QUEUE']
     job_spec = "job-%s:%s" % (job_type, job_release)
-    job_params = {}
+    job_params = {"minutes": minutes}
     tags = ["data-subscriber-query-timer"]
     job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(datetime.utcnow(), JOB_NAME_DATETIME_FORMAT),
-                                       convert_datetime(minutes, JOB_NAME_DATETIME_FORMAT))
+                                                          minutes)
     # submit mozart job
     submit_job(job_name, job_spec, job_params, queue, tags)
