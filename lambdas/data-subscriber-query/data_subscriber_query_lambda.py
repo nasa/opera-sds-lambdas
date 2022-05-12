@@ -56,6 +56,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         if result["success"] is True:
             job_id = result["result"]
             print("submitted job: %s job_id: %s" % (job_spec, job_id))
+            return job_id
         else:
             print("job not submitted successfully: %s" % result)
             raise Exception("job not submitted successfully: %s" % result)
@@ -104,10 +105,15 @@ def lambda_handler(event, context):
         "isl_bucket_name": isl_bucket_name,
         "isl_staging_area": isl_staging_area,
         "start_time": convert_datetime(start_time),
-        "end_time": convert_datetime(end_time)
+        "end_time": convert_datetime(end_time),
+        "download_job_release": os.environ["JOB_RELEASE"],
+        "download_job_queue": os.environ["DOWNLOAD_JOB_QUEUE"],
+        "chunk_size": os.environ["CHUNK_SIZE"],
+        "smoke_run": os.environ["SMOKE_RUN"],
+        "dry_run": os.environ["DRY_RUN"]
     }
     tags = ["data-subscriber-query-timer"]
     job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(start_time, JOB_NAME_DATETIME_FORMAT),
                                        convert_datetime(end_time, JOB_NAME_DATETIME_FORMAT))
     # submit mozart job
-    submit_job(job_name, job_spec, job_params, queue, tags)
+    return submit_job(job_name, job_spec, job_params, queue, tags)
