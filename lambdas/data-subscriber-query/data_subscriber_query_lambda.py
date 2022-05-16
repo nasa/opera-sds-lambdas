@@ -76,12 +76,13 @@ def lambda_handler(event, context):
     print("os.environ: %s" % os.environ)
 
     minutes = re.search(r'\d+', os.environ['MINUTES']).group()
+    provider = os.environ['PROVIDER']
 
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']
     queue = os.environ['JOB_QUEUE']
     job_spec = "job-%s:%s" % (job_type, job_release)
-    job_params = {"minutes": minutes}
+    job_params = {"minutes": minutes, "provider": provider}
     tags = ["data-subscriber-query-timer"]
     job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(datetime.utcnow(), JOB_NAME_DATETIME_FORMAT),
                                                           minutes)
