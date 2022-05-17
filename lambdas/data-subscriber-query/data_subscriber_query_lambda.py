@@ -4,6 +4,7 @@ import json
 import os
 import re
 from datetime import datetime
+from distutils.util import strtobool
 
 import requests
 
@@ -86,13 +87,14 @@ def lambda_handler(event, context):
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
         "isl_bucket_name": isl_bucket_name,
-        "minutes": minutes,
-        "provider": provider,
-        "download_job_release": os.environ["JOB_RELEASE"],
-        "download_job_queue": os.environ["DOWNLOAD_JOB_QUEUE"],
-        "chunk_size": os.environ["CHUNK_SIZE"],
-        "smoke_run": os.environ["SMOKE_RUN"],
-        "dry_run": os.environ["DRY_RUN"]
+        "minutes": f"-m {minutes}",
+        "provider": f"-p {provider}",
+        "bounding_box": "",
+        "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
+        "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
+        "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
+        "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
+        "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
     }
     tags = ["data-subscriber-query-timer"]
     job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(datetime.utcnow(), JOB_NAME_DATETIME_FORMAT),
