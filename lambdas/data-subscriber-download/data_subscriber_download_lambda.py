@@ -86,7 +86,6 @@ def lambda_handler(event, context):
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
         "isl_bucket_name": isl_bucket_name,
-        "isl_staging_area": isl_staging_area,
         "smoke_run": os.environ["SMOKE_RUN"],
         "dry_run": os.environ["DRY_RUN"]
     }
