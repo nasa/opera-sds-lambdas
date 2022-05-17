@@ -81,8 +81,10 @@ def lambda_handler(event, context):
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']
     queue = os.environ['JOB_QUEUE']
+    isl_bucket_name = os.environ['ISL_BUCKET_NAME']
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
+        "isl_bucket_name": isl_bucket_name,
         "minutes": minutes,
         "download_job_release": os.environ["JOB_RELEASE"],
         "download_job_queue": os.environ["DOWNLOAD_JOB_QUEUE"],
