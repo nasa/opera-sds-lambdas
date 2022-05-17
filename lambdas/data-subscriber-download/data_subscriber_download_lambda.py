@@ -81,7 +81,6 @@ def lambda_handler(event, context):
     job_release = os.environ['JOB_RELEASE']
     queue = os.environ['JOB_QUEUE']
     isl_bucket_name = os.environ['ISL_BUCKET_NAME']
-    isl_staging_area = os.environ['ISL_STAGING_AREA']
 
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
