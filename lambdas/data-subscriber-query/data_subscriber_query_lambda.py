@@ -77,6 +77,7 @@ def lambda_handler(event, context):
     print("os.environ: %s" % os.environ)
 
     minutes = re.search(r'\d+', os.environ['MINUTES']).group()
+    provider = os.environ['PROVIDER']
 
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']
@@ -86,6 +87,7 @@ def lambda_handler(event, context):
     job_params = {
         "isl_bucket_name": isl_bucket_name,
         "minutes": minutes,
+        "provider": provider,
         "download_job_release": os.environ["JOB_RELEASE"],
         "download_job_queue": os.environ["DOWNLOAD_JOB_QUEUE"],
         "chunk_size": os.environ["CHUNK_SIZE"],
