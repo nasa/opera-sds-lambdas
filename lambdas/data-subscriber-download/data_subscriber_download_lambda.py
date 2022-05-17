@@ -1,10 +1,10 @@
 from __future__ import print_function
 
-import os
 import json
-import requests
+import os
+from datetime import datetime
 
-from datetime import datetime, timedelta
+import requests
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
