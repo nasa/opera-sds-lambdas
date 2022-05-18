@@ -86,7 +86,7 @@ def lambda_handler(event, context):
     isl_bucket_name = os.environ['ISL_BUCKET_NAME']
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
-        "isl_bucket_name": isl_bucket_name,
+        "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
         "minutes": f"-m {minutes}",
         "provider": f"-p {provider}",
         "bounding_box": "",
