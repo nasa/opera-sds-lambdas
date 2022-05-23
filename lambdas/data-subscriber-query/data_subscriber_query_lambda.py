@@ -4,7 +4,7 @@ import json
 import os
 import re
 from datetime import datetime
-
+from distutils.util import strtobool
 import requests
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -57,6 +57,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         if result["success"] is True:
             job_id = result["result"]
             print("submitted job: %s job_id: %s" % (job_spec, job_id))
+            return job_id
         else:
             print("job not submitted successfully: %s" % result)
             raise Exception("job not submitted successfully: %s" % result)
@@ -81,10 +82,23 @@ def lambda_handler(event, context):
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']
     queue = os.environ['JOB_QUEUE']
+    isl_bucket_name = os.environ['ISL_BUCKET_NAME']
     job_spec = "job-%s:%s" % (job_type, job_release)
-    job_params = {"minutes": minutes, "provider": provider}
+    job_params = {
+        "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
+        "minutes": f"-m {minutes}",
+        "provider": f"-p {provider}",
+        "bounding_box": "",
+        "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
+        "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
+        "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
+        "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
+        "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
+        "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}'
+    }
+    
     tags = ["data-subscriber-query-timer"]
     job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(datetime.utcnow(), JOB_NAME_DATETIME_FORMAT),
                                                           minutes)
     # submit mozart job
-    submit_job(job_name, job_spec, job_params, queue, tags)
+    return submit_job(job_name, job_spec, job_params, queue, tags)
