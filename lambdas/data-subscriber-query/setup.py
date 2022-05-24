@@ -5,9 +5,9 @@ California Institute of Technology.  All rights reserved
 import glob
 import os
 import shlex
+import shutil
 import subprocess
 import sys
-import shutil
 
 import setuptools
 import setuptools.command.sdist
@@ -26,7 +26,7 @@ class Package(setuptools.Command):
     user_options = [
         ('version=', 'v', 'version release'),
         ('lambda-func=', 'l', 'Path to the Lambda function to softlink to '
-                         'lambda_function.py'),
+                              'lambda_function.py'),
         ('workspace=', 'w', 'Workspace directory. '
                             'Default is current working dir.'),
         ('package-dir=', 'p', 'Directory where the lambda package will be '
