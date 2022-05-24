@@ -5,7 +5,6 @@ import os
 import re
 from datetime import datetime
 from distutils.util import strtobool
-
 import requests
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -97,6 +96,7 @@ def lambda_handler(event, context):
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}'
     }
+    
     tags = ["data-subscriber-query-timer"]
     job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(datetime.utcnow(), JOB_NAME_DATETIME_FORMAT),
                                                           minutes)
