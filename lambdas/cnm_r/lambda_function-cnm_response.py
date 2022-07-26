@@ -94,6 +94,10 @@ def lambda_handler(event, context):
     else:
         job_params["product_tagging"] = False
 
+    # Explicitly set the update_s3_tag 
+	# PCM to wait for CNM-R/SCNM-R success message before cleaning up OSL (https://github.jpl.nasa.gov/IEMS-SDS/CNM_product_delivery/pull/48)
+    job_params["update_s3_tag"] = False
+
     event_trigger = EVENT_TRIGGER
     if event_trigger.lower() == "sns":
         cnm_message = json.loads(event["Records"][0]["Sns"]["Message"])
