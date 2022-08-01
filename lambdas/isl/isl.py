@@ -110,60 +110,6 @@ def delete_isl_messages(event, entries):
         for failed in response["Failed"]:
             print("Failed to Delete: \n{}".format(json.dumps(failed)))
 
-
-def is_vcid(filename):
-    file_ext = filename.split(".")
-    if len(file_ext) == 1:
-        return False
-
-    extension = file_ext[-1]
-
-    if extension[0:2] == "vc":
-        return True
-    else:
-        return False
-
-
-def is_sds_vcid(filename):
-    extension = filename.split(".")[-1]
-    try:
-        k = int(extension[2:])
-    except ValueError:
-        return False
-
-    if 8 <= k <= 63:
-        return True
-    else:
-        return False
-
-
-def is_valid_sds_vcid(filename):
-    """See https://wiki.jpl.nasa.gov/pages/viewpage.action?spaceKey=NISARSDS&title=NISAR+VCID+list"""
-
-    valid_vcid = [8, 9, 12, 13, 20, 21, 24, 25, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 44, 45, 48, 49, 50, 51, 52, 53,
-                  54, 55, 63]
-    extension = filename.split(".")[-1]
-
-    try:
-        k = int(extension[2:])
-    except ValueError:
-        return False
-    if k in valid_vcid:
-        return True
-    else:
-        return False
-
-
-def get_vcid(filename):
-    extension = filename.split(".")[-1]
-    k = -1
-    try:
-        k = int(extension[2:])
-    except ValueError:
-        pass
-    return k
-
-
 def send_SNS_message(message):
     client = boto3.client("sns")
     response = client.publish(TargetArn=os.environ["ISL_SNS_TOPIC"], Message=message,)
@@ -218,43 +164,12 @@ def lambda_handler(event, context):
         # trigger_file has the prefix to know what kind of file is being ingested.
         file_type = trigger_file[: trigger_file.find("/")]
         print("Trigger file: {}".format(trigger_file))
+        s3obj_etag = s3_info["object"]["eTag"]
+        print("S3 eTag: {}".format(s3obj_etag))
 
         s3 = boto3.resource("s3")
         metreq = os.environ["MET_REQUIRED"]
         gds_obj = s3.Object(bucket, trigger_file)
-
-        # delete GDS vcid file
-        if is_vcid(trigger_file) and not is_sds_vcid(trigger_file):
-            print(" -- Deleting GDS vcid from bucket {}".format(trigger_file))
-            gds_obj.delete()
-            # send to SNS
-            message = "Notification for unexpected receipt of non-SDS NISAR vcid file.\n File {} has GDS VCID.\n It will be purged.".format(
-                trigger_file
-            )
-            send_SNS_message(message)
-            continue
-
-        # delete invalid sds vcid
-        if is_vcid(trigger_file) and not is_valid_sds_vcid(trigger_file) :
-            print(" -- Deleting invalid vcid from bucket {}".format(trigger_file))
-            gds_obj.delete()
-            # send to SNS
-            message = "Notification for unexpected receipt of invalid SDS NISAR vcid file.\n File {} has invalid SDS VCID.\n It will be purged.".format(
-                trigger_file
-            )
-            send_SNS_message(message)
-            continue
-
-        # delete vcid 63, filled data
-        if is_vcid(trigger_file) and get_vcid(trigger_file) == 63:
-            print(" -- Deleting vcid63 file from bucket {}".format(trigger_file))
-            gds_obj.delete()
-            # send to SNS
-            message = "Notification for unexpected receipt of vc63 file.\n File {} is expected to be idle(fill) data.\n It will be purged.".format(
-                trigger_file
-            )
-            send_SNS_message(message)
-            continue
 
         if signal_file_suffix.get(file_type) is None:
             # this file type doesn't have an associated signal file
@@ -330,16 +245,6 @@ def lambda_handler(event, context):
             "S3_event_record": message["Records"][0],
             "Lambda_trigger_time": datetime.utcnow().strftime(DATETIME_FORMAT),
         }
-
-        # extract json data if file is .ldf and add it to metadata
-        if file_type == "ldf":
-            s3 = boto3.resource("s3")
-            if get_group(trigger_file) == "01":
-                is_urgent_response = True
-            ldf_file_obj = s3.Object(bucket, trigger_file)
-            content = ldf_file_obj.get()["Body"].read()
-            ldf_meta = json.loads(content)
-            md = {**md, **ldf_meta}
         print("Metadata created: {}".format(json.dumps(md, indent=2)))
 
         # data file
@@ -365,6 +270,7 @@ def lambda_handler(event, context):
             "prod_met": md,
             "checksum": checksum,
             "checksum_type": checksum_type,
+            "payload_hash": s3obj_etag,
         }
         tags = ["data-staged"]
 
