@@ -88,6 +88,7 @@ def lambda_handler(event, context):
         "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
         "minutes": f"-m {minutes}",
         "provider": f"-p {provider}",
+        "endpoint": f'--endpoint={os.environ["ENDPOINT"]}',
         "bounding_box": "",
         "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
         "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
