@@ -5,7 +5,13 @@ import os
 import re
 from datetime import datetime
 from distutils.util import strtobool
+from typing import Dict
+
+import dateutil.parser
 import requests
+from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
+from aws_lambda_powertools.utilities.typing import LambdaContext
+from dateutil.relativedelta import relativedelta
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
@@ -65,7 +71,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         raise Exception("job not submitted successfully: %s" % result)
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: Dict, context: LambdaContext):
     """
     This lambda handler calls submit_job with the job type info
     and dataset_type set in the environment
@@ -76,7 +82,13 @@ def lambda_handler(event, context):
     print("Got context: %s" % context)
     print("os.environ: %s" % os.environ)
 
+    event = EventBridgeEvent(event)
+    query_end_datetime = dateutil.parser.isoparse(event.time)
+
     minutes = re.search(r'\d+', os.environ['MINUTES']).group()
+    query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
+
+
     provider = os.environ['PROVIDER']
 
     job_type = os.environ['JOB_TYPE']
@@ -86,7 +98,8 @@ def lambda_handler(event, context):
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
         "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
-        "minutes": f"-m {minutes}",
+        "start_datetime": f"--start-date={convert_datetime(query_start_datetime)}",
+        "end_datetime": f"--end-date={convert_datetime(query_end_datetime)}",
         "provider": f"-p {provider}",
         "endpoint": f'--endpoint={os.environ["ENDPOINT"]}',
         "bounding_box": "",
