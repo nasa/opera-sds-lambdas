@@ -14,6 +14,7 @@ if "SIGNAL_FILE_SUFFIX" in os.environ:
 
 if "MOZART_URL" not in os.environ:
     raise RuntimeError("Need to specify MOZART_URL in environment.")
+
 MOZART_URL = os.environ["MOZART_URL"]
 JOB_SUBMIT_URL = "%s/api/v0.1/job/submit" % MOZART_URL
 
