@@ -94,10 +94,8 @@ def lambda_handler(event: Dict, context: LambdaContext):
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']
     queue = os.environ['JOB_QUEUE']
-    isl_bucket_name = os.environ['ISL_BUCKET_NAME']
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
-        "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
         "start_datetime": f"--start-date={convert_datetime(query_start_datetime)}",
         "end_datetime": f"--end-date={convert_datetime(query_end_datetime)}",
         "provider": f"-p {provider}",
