@@ -1,27 +1,38 @@
 from __future__ import print_function
-
 import json
 import os
 import re
-from datetime import datetime
 from distutils.util import strtobool
 from typing import Dict
-
 import dateutil.parser
 import requests
-from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
-from aws_lambda_powertools.utilities.typing import LambdaContext
-from dateutil.relativedelta import relativedelta
+#from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
+#from aws_lambda_powertools.utilities.typing import LambdaContext
+#from dateutil.relativedelta import relativedelta
+
+from types import SimpleNamespace
+import time
+from datetime import datetime, timedelta, timezone
+from hysds_commons.elasticsearch_utils import ElasticsearchUtility
+import logging
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
+MOZART_IP = '100.104.40.171'
+GRQ_IP = '100.104.40.166'
+MOZART_URL = 'https://%s/mozart' % MOZART_IP
+JOB_SUBMIT_URL = "%s/api/v0.1/job/submit?enable_dedup=false" % MOZART_URL
+
+ES_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+ES_INDEX = 'batch_proc'
+LOGGER = logging.getLogger(ES_INDEX)
+eu = ElasticsearchUtility('http://%s:9200' % GRQ_IP, LOGGER)
 
 print("Loading Lambda function")
 
-if "MOZART_URL" not in os.environ:
+'''if "MOZART_URL" not in os.environ:
     raise RuntimeError("Need to specify MOZART_URL in environment.")
-MOZART_URL = os.environ["MOZART_URL"]
-JOB_SUBMIT_URL = "%s/api/v0.1/job/submit?enable_dedup=false" % MOZART_URL
+MOZART_URL = os.environ["MOZART_URL"]'''
 
 
 def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
@@ -71,7 +82,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         raise Exception("job not submitted successfully: %s" % result)
 
 
-def lambda_handler(event: Dict, context: LambdaContext):
+'''def lambda_handler(event: Dict, context: LambdaContext):
     """
     This lambda handler calls submit_job with the job type info
     and dataset_type set in the environment
@@ -117,22 +128,10 @@ def lambda_handler(event: Dict, context: LambdaContext):
                                                           minutes)
     # submit mozart job
     return submit_job(job_name, job_spec, job_params, queue, tags)
-
-
-from types import SimpleNamespace
-import time
-from datetime import datetime, timedelta, timezone
-from hysds_commons.elasticsearch_utils import ElasticsearchUtility
-import logging
-
-DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
-ES_INDEX = 'batch_proc'
-LOGGER = logging.getLogger(ES_INDEX)
-eu = ElasticsearchUtility('http://100.104.40.166:9200', LOGGER)
-
+'''
 
 def batch_proc_once():
-    procs = eu.query(index=ES_INDEX)
+    procs = eu.query(index=ES_INDEX) #TODO: query for only enabled docs
     for proc in procs:
         doc_id = proc['_id']
         proc = proc['_source']
@@ -143,7 +142,8 @@ def batch_proc_once():
             continue
 
         now = datetime.utcnow()
-        new_last_run_date = datetime.strptime(p.last_run_date, DATETIME_FORMAT) + timedelta(minutes=p.run_interval_mins)
+        new_last_run_date = datetime.strptime(p.last_run_date, ES_DATETIME_FORMAT) + timedelta(
+            minutes=p.run_interval_mins)
 
         # If it's not time to run yet, just continue
         if new_last_run_date > now:
@@ -153,17 +153,17 @@ def batch_proc_once():
         eu.update_document(id=doc_id,
                            body={"doc_as_upsert": True,
                                  "doc": {
-                                     "last_run_date": now.strftime(DATETIME_FORMAT), }},
+                                     "last_run_date": now.strftime(ES_DATETIME_FORMAT), }},
                            index=ES_INDEX)
 
         # If it's not time to run yet, just continue
         # if new_last_run_date > now:
         #    continue
 
-        data_start_date = datetime.strptime(p.data_start_date, DATETIME_FORMAT)
-        data_end_date = datetime.strptime(p.data_end_date, DATETIME_FORMAT)
+        data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
+        data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
 
-        s_date = datetime.strptime(p.last_successful_proc_data_date, DATETIME_FORMAT)
+        s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
         if s_date < data_start_date:
             s_date = data_start_date
 
@@ -189,7 +189,37 @@ def batch_proc_once():
                            index=ES_INDEX)
 
         print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
-        # TODO: Submit the job
+        # Submit the job
+        provider = p.provider_name  # os.environ['PROVIDER']
+        job_type = 'hlsl30_query'  # os.environ['JOB_TYPE']
+        job_release = 'issue_236_download_job_spec_exception'  # os.environ['JOB_RELEASE']
+        queue = p.job_queue  # os.environ['JOB_QUEUE']
+        isl_bucket_name = p.ingest_s3  # os.environ['ISL_BUCKET_NAME']
+        end_point = 'OPS'  # os.environ["ENDPOINT"]
+        download_job_queue = p.download_job_queue
+        job_spec = "job-%s:%s" % (job_type, job_release)
+        job_params = {
+            "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
+            "start_datetime": f"--start-date={convert_datetime(s_date)}",
+            "end_datetime": f"--end-date={convert_datetime(e_date)}",
+            "provider": f"-p {provider}",
+            "endpoint": f'--endpoint={end_point}',
+            "bounding_box": "",
+            "download_job_release": f'--release-version={job_release}',
+            "download_job_queue": f'--job-queue={download_job_queue}',
+            "chunk_size": f'--chunk-size={p.chunk_size}',
+            "smoke_run": "",
+            "dry_run": "",
+            "no_schedule_download": "",
+            "use_temporal": ""
+        }
+
+        tags = ["data-subscriber-query-timer"]
+        job_name = "data-subscriber-query-timer-{}_{}-{}".format(p.label, s_date.strftime(ES_DATETIME_FORMAT),
+                                                                 e_date.strftime(ES_DATETIME_FORMAT))
+        # submit mozart job
+        job_success = submit_job(job_name, job_spec, job_params, queue, tags)
+        print(job_success)
 
         # Update last_successful_proc_data_date here
         eu.update_document(id=doc_id,
@@ -198,10 +228,7 @@ def batch_proc_once():
                                      "last_successful_proc_data_date": e_date, }},
                            index=ES_INDEX)
 
-
 if __name__ == '__main__':
     while (True):
         batch_proc_once()
         time.sleep(10)
-
-
