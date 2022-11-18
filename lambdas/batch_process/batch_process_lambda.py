@@ -124,14 +124,14 @@ import time
 from datetime import datetime, timedelta, timezone
 from hysds_commons.elasticsearch_utils import ElasticsearchUtility
 import logging
+
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 ES_INDEX = 'batch_proc'
-
 LOGGER = logging.getLogger(ES_INDEX)
-
 eu = ElasticsearchUtility('http://100.104.40.166:9200', LOGGER)
 
-while(True):
+
+def batch_proc_once():
     procs = eu.query(index=ES_INDEX)
     for proc in procs:
         doc_id = proc['_id']
@@ -142,11 +142,23 @@ while(True):
         if p.enabled == False:
             continue
 
+        now = datetime.utcnow()
+        new_last_run_date = datetime.strptime(p.last_run_date, DATETIME_FORMAT) + timedelta(minutes=p.run_interval_mins)
+
         # If it's not time to run yet, just continue
-        last_run_date = datetime.strptime(p.last_run_date, DATETIME_FORMAT)
-        #TODO: update last_run_date here, note that the last_run_date we compare below still uses the old value
-        if last_run_date + timedelta(minutes = p.run_interval_mins) > datetime.utcnow():
+        if new_last_run_date > now:
             continue
+
+        # TODO: update last_run_date here, note that the last_run_date we compare below still uses the old value
+        eu.update_document(id=doc_id,
+                           body={"doc_as_upsert": True,
+                                 "doc": {
+                                     "last_run_date": now.strftime(DATETIME_FORMAT), }},
+                           index=ES_INDEX)
+
+        # If it's not time to run yet, just continue
+        # if new_last_run_date > now:
+        #    continue
 
         data_start_date = datetime.strptime(p.data_start_date, DATETIME_FORMAT)
         data_end_date = datetime.strptime(p.data_end_date, DATETIME_FORMAT)
@@ -161,21 +173,35 @@ while(True):
 
         # See if we've reached the end of this batch proc. If so, disable it.
         if s_date >= data_end_date:
-            #TODO: disable this proc
-            break
+            print(p.label, "Batch Proc completed processing. It is now disabled")
+            eu.update_document(id=doc_id,
+                               body={"doc_as_upsert": True,
+                                     "doc": {
+                                         "enabled": False, }},
+                               index=ES_INDEX)
+            continue
 
-        #TODO: update last_attempted_proc_data_date here
-
-
-        print("Submitting query job with start date", s_date, "and end date",  e_date)
-        #TODO: Submit the job
-
-        #TODO: update last_successful_proc_data_date here
+        # update last_attempted_proc_data_date here
         eu.update_document(id=doc_id,
-                            body={"doc_as_upsert": True,
-                            "doc": {
-                            "last_successful_proc_data_date": e_date, }},
-                            index=ES_INDEX)
+                           body={"doc_as_upsert": True,
+                                 "doc": {
+                                     "last_attempted_proc_data_date": e_date, }},
+                           index=ES_INDEX)
 
-    time.sleep(10)
+        print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
+        # TODO: Submit the job
+
+        # Update last_successful_proc_data_date here
+        eu.update_document(id=doc_id,
+                           body={"doc_as_upsert": True,
+                                 "doc": {
+                                     "last_successful_proc_data_date": e_date, }},
+                           index=ES_INDEX)
+
+
+if __name__ == '__main__':
+    while (True):
+        batch_proc_once()
+        time.sleep(10)
+
 
