@@ -109,7 +109,8 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
-        "use_temporal": ""
+        "use_temporal": "",
+        "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", "")
     }
     
     tags = ["data-subscriber-query-timer"]
