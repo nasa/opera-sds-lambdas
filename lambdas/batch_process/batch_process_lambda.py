@@ -6,9 +6,6 @@ from distutils.util import strtobool
 from typing import Dict
 import dateutil.parser
 import requests
-#from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
-#from aws_lambda_powertools.utilities.typing import LambdaContext
-#from dateutil.relativedelta import relativedelta
 
 from types import SimpleNamespace
 import time
@@ -18,8 +15,13 @@ import logging
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
-MOZART_IP = '100.104.40.171'
-GRQ_IP = '100.104.40.166'
+
+'''if "MOZART_URL" not in os.environ:
+    raise RuntimeError("Need to specify MOZART_URL in environment.")
+MOZART_URL = os.environ["MOZART_URL"]'''
+
+MOZART_IP = '100.104.40.171' #TODO: get this dynamically
+GRQ_IP = '100.104.40.166'    #TODO: get this dynamically
 MOZART_URL = 'https://%s/mozart' % MOZART_IP
 JOB_SUBMIT_URL = "%s/api/v0.1/job/submit?enable_dedup=false" % MOZART_URL
 
@@ -29,11 +31,6 @@ LOGGER = logging.getLogger(ES_INDEX)
 eu = ElasticsearchUtility('http://%s:9200' % GRQ_IP, LOGGER)
 
 print("Loading Lambda function")
-
-'''if "MOZART_URL" not in os.environ:
-    raise RuntimeError("Need to specify MOZART_URL in environment.")
-MOZART_URL = os.environ["MOZART_URL"]'''
-
 
 def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
@@ -81,55 +78,6 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
     else:
         raise Exception("job not submitted successfully: %s" % result)
 
-
-'''def lambda_handler(event: Dict, context: LambdaContext):
-    """
-    This lambda handler calls submit_job with the job type info
-    and dataset_type set in the environment
-    """
-
-    print("Got event of type: %s" % type(event))
-    print("Got event: %s" % json.dumps(event))
-    print("Got context: %s" % context)
-    print("os.environ: %s" % os.environ)
-
-    event = EventBridgeEvent(event)
-    query_end_datetime = dateutil.parser.isoparse(event.time)
-
-    minutes = re.search(r'\d+', os.environ['MINUTES']).group()
-    query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
-
-
-    provider = os.environ['PROVIDER']
-
-    job_type = os.environ['JOB_TYPE']
-    job_release = os.environ['JOB_RELEASE']
-    queue = os.environ['JOB_QUEUE']
-    isl_bucket_name = os.environ['ISL_BUCKET_NAME']
-    job_spec = "job-%s:%s" % (job_type, job_release)
-    job_params = {
-        "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
-        "start_datetime": f"--start-date={convert_datetime(query_start_datetime)}",
-        "end_datetime": f"--end-date={convert_datetime(query_end_datetime)}",
-        "provider": f"-p {provider}",
-        "endpoint": f'--endpoint={os.environ["ENDPOINT"]}',
-        "bounding_box": "",
-        "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
-        "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
-        "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
-        "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
-        "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
-        "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
-        "use_temporal": ""
-    }
-    
-    tags = ["data-subscriber-query-timer"]
-    job_name = "data-subscriber-query-timer-{}_{}".format(convert_datetime(datetime.utcnow(), JOB_NAME_DATETIME_FORMAT),
-                                                          minutes)
-    # submit mozart job
-    return submit_job(job_name, job_spec, job_params, queue, tags)
-'''
-
 def batch_proc_once():
     procs = eu.query(index=ES_INDEX) #TODO: query for only enabled docs
     for proc in procs:
@@ -155,10 +103,6 @@ def batch_proc_once():
                                  "doc": {
                                      "last_run_date": now.strftime(ES_DATETIME_FORMAT), }},
                            index=ES_INDEX)
-
-        # If it's not time to run yet, just continue
-        # if new_last_run_date > now:
-        #    continue
 
         data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
         data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
@@ -190,7 +134,8 @@ def batch_proc_once():
 
         print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
         # Submit the job
-        provider = p.provider_name  # os.environ['PROVIDER']
+        #TODO: Get all these from env var
+        provider = p.provider_name
         job_type = 'hlsl30_query'  # os.environ['JOB_TYPE']
         job_release = 'issue_236_download_job_spec_exception'  # os.environ['JOB_RELEASE']
         queue = p.job_queue  # os.environ['JOB_QUEUE']
@@ -219,7 +164,6 @@ def batch_proc_once():
                                                                  e_date.strftime(ES_DATETIME_FORMAT))
         # submit mozart job
         job_success = submit_job(job_name, job_spec, job_params, queue, tags)
-        print(job_success)
 
         # Update last_successful_proc_data_date here
         eu.update_document(id=doc_id,
@@ -228,7 +172,26 @@ def batch_proc_once():
                                      "last_successful_proc_data_date": e_date, }},
                            index=ES_INDEX)
 
+        return job_success
+
+def lambda_handler(event: Dict, context):# LambdaContext): #TODO restore the param typing
+    """
+    This lambda handler calls submit_job with the job type info
+    and dataset_type set in the environment
+    """
+    from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
+    from aws_lambda_powertools.utilities.typing import LambdaContext
+    event = EventBridgeEvent(event)
+
+    print("Got event of type: %s" % type(event))
+    print("Got event: %s" % json.dumps(event))
+    print("Got context: %s" % context)
+    print("os.environ: %s" % os.environ)
+
+    # submit mozart job
+    return batch_proc_once()
+
 if __name__ == '__main__':
     while (True):
-        batch_proc_once()
+        print(batch_proc_once())
         time.sleep(10)
