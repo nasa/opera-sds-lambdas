@@ -16,12 +16,20 @@ import logging
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
 
-'''if "MOZART_URL" not in os.environ:
-    raise RuntimeError("Need to specify MOZART_URL in environment.")
-MOZART_URL = os.environ["MOZART_URL"]'''
+# Requires these 4 env variables
+_ENV_MOZART_IP = "MOZART_IP"
+_ENV_GRQ_IP = "GRQ_IP"
+_ENV_ENDPOINT = "ENDPOINT"
+_ENV_JOB_RELEASE = "JOB_RELEASE"
 
-MOZART_IP = '100.104.40.171' #TODO: get this dynamically
-GRQ_IP = '100.104.40.166'    #TODO: get this dynamically
+for ev in [_ENV_MOZART_IP, _ENV_GRQ_IP, _ENV_ENDPOINT, _ENV_JOB_RELEASE]:
+    if ev not in os.environ:
+        raise RuntimeError("Need to specify %s in environment." % ev)
+MOZART_IP = os.environ[_ENV_MOZART_IP]
+GRQ_IP = os.environ[_ENV_GRQ_IP]
+ENDPOINT = os.environ[_ENV_ENDPOINT]
+JOB_RELEASE = os.environ[_ENV_JOB_RELEASE]
+
 MOZART_URL = 'https://%s/mozart' % MOZART_IP
 JOB_SUBMIT_URL = "%s/api/v0.1/job/submit?enable_dedup=false" % MOZART_URL
 
@@ -85,7 +93,7 @@ def batch_proc_once():
         proc = proc['_source']
         p = SimpleNamespace(**proc)
 
-        # If this batch proc is disabled, continue
+        # If this batch proc is disabled, continue TODO: this goes away when we change the query above
         if p.enabled == False:
             continue
 
@@ -97,7 +105,7 @@ def batch_proc_once():
         if new_last_run_date > now:
             continue
 
-        # TODO: update last_run_date here, note that the last_run_date we compare below still uses the old value
+        # Update last_run_date here
         eu.update_document(id=doc_id,
                            body={"doc_as_upsert": True,
                                  "doc": {
@@ -107,10 +115,16 @@ def batch_proc_once():
         data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
         data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
 
+        # Start date time is when the last successful process data time.
+        # If this is before the data start time, which may be the case when this batch_proc is first run,
+        # change it to the data start time.
         s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
         if s_date < data_start_date:
             s_date = data_start_date
 
+        # End date time is when the start data time plus data increment time in minutes.
+        # If this is after the data end time, which would be the case when this is the very last iteration of this proc,
+        # change it to the data end time.
         e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
         if e_date > data_end_date:
             e_date = data_end_date
@@ -134,13 +148,12 @@ def batch_proc_once():
 
         print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
         # Submit the job
-        #TODO: Get all these from env var
         provider = p.provider_name
-        job_type = 'hlsl30_query'  # os.environ['JOB_TYPE']
-        job_release = 'issue_236_download_job_spec_exception'  # os.environ['JOB_RELEASE']
-        queue = p.job_queue  # os.environ['JOB_QUEUE']
-        isl_bucket_name = p.ingest_s3  # os.environ['ISL_BUCKET_NAME']
-        end_point = 'OPS'  # os.environ["ENDPOINT"]
+        job_type = p.job_type
+        job_release = JOB_RELEASE
+        queue = p.job_queue
+        isl_bucket_name = p.ingest_s3
+        end_point = ENDPOINT
         download_job_queue = p.download_job_queue
         job_spec = "job-%s:%s" % (job_type, job_release)
         job_params = {
