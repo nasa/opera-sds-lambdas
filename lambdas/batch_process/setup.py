@@ -200,7 +200,7 @@ class Package(setuptools.Command):
 setuptools.setup(
     name="lambda-batch-process-handler",
     author="PCM",
-    description="Lambda package for submitting jobs that perform data subscribing to DAACs",
+    description="Lambda package for submitting batch processing jobs",
     packages=setuptools.find_packages(),
     include_package_data=True,
     cmdclass={
