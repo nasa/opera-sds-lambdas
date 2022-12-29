@@ -10,6 +10,8 @@ import requests
 from types import SimpleNamespace
 import time
 from datetime import datetime, timedelta, timezone
+from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from hysds_commons.elasticsearch_utils import ElasticsearchUtility
 import logging
 
@@ -39,6 +41,7 @@ LOGGER = logging.getLogger(ES_INDEX)
 eu = ElasticsearchUtility('http://%s:9200' % GRQ_IP, LOGGER)
 
 print("Loading Lambda function")
+
 
 def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
@@ -86,8 +89,9 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
     else:
         raise Exception("job not submitted successfully: %s" % result)
 
+
 def batch_proc_once():
-    procs = eu.query(index=ES_INDEX) #TODO: query for only enabled docs
+    procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
     for proc in procs:
         doc_id = proc['_id']
         proc = proc['_source']
@@ -187,22 +191,23 @@ def batch_proc_once():
 
         return job_success
 
-def lambda_handler(event: Dict, context):# LambdaContext): #TODO restore the param typing
+
+def lambda_handler(event: Dict, context: LambdaContext):
     """
     This lambda handler calls submit_job with the job type info
     and dataset_type set in the environment
     """
-    from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
-    from aws_lambda_powertools.utilities.typing import LambdaContext
+
     event = EventBridgeEvent(event)
 
     print("Got event of type: %s" % type(event))
-    print("Got event: %s" % json.dumps(event))
+    # print("Got event: %s" % json.dumps(event))
     print("Got context: %s" % context)
     print("os.environ: %s" % os.environ)
 
     # submit mozart job
     return batch_proc_once()
+
 
 if __name__ == '__main__':
     while (True):

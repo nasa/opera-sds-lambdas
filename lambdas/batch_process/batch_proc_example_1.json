@@ -8,7 +8,7 @@
   "last_run_date": "1900-01-01T12:57:01",
   "data_date_incr_mins": 5,
   "run_interval_mins": 1,
-  "job_type": "hlsl30_query",
+  "job_type": "hlss30_query",
   "collection_short_name": "HLSS30",
   "provider_name": "LPCLOUD",
   "ingest_s3": "opera-dev-isl-fwd-pyoon",
