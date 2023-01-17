@@ -94,7 +94,6 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "end_datetime": f"--end-date={query_end_datetime.strftime(DATETIME_FORMAT)}",
         "provider": f"-p {provider}",
         "endpoint": f'--endpoint={os.environ["ENDPOINT"]}',
-        "bounding_box": "",
         "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
         "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
         "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
