@@ -83,6 +83,7 @@ def lambda_handler(event: Dict, context: LambdaContext):
     query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
 
     provider = os.environ["PROVIDER"]
+    bounding_box = os.environ.get("BOUNDING_BOX")
 
     job_type = os.environ["JOB_TYPE"]
     job_release = os.environ["JOB_RELEASE"]
@@ -101,7 +102,8 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
         "use_temporal": "",
-        "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", "")
+        "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", ""),
+        "bounding_box": f'--bounds="{bounding_box}"' if bounding_box else ""
     }
     
     tags = ["data-subscriber-query-timer"]
