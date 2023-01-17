@@ -102,7 +102,7 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
         "use_temporal": "",
         "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", ""),
-        "bounding_box": f'--bounds="{bounding_box}"' if bounding_box else ""
+        "bounding_box": f'--bounds={bounding_box}' if bounding_box else ""
     }
     
     tags = ["data-subscriber-query-timer"]
