@@ -159,6 +159,14 @@ def batch_proc_once():
         isl_bucket_name = p.ingest_s3
         end_point = ENDPOINT
         download_job_queue = p.download_job_queue
+        try:
+            if p.historical is True:
+                historical = True
+            else:
+                historical = False
+        except:
+            print("historical parameter not found in batch proc. Defaulting to false.")
+            historical = False
         job_spec = "job-%s:%s" % (job_type, job_release)
         job_params = {
             "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
@@ -170,6 +178,7 @@ def batch_proc_once():
             "download_job_release": f'--release-version={job_release}',
             "download_job_queue": f'--job-queue={download_job_queue}',
             "chunk_size": f'--chunk-size={p.chunk_size}',
+            "historical": f'--north-america-only' if historical is True else "",
             "smoke_run": "",
             "dry_run": "",
             "no_schedule_download": "",
@@ -177,6 +186,10 @@ def batch_proc_once():
         }
 
         tags = ["data-subscriber-query-timer"]
+        if historical is True:
+            tags.append("historical_processing")
+        else:
+            tags.append("batch_processing")
         job_name = "data-subscriber-query-timer-{}_{}-{}".format(p.label, s_date.strftime(ES_DATETIME_FORMAT),
                                                                  e_date.strftime(ES_DATETIME_FORMAT))
         # submit mozart job

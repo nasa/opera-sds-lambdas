@@ -1,6 +1,7 @@
  {
   "enabled": true,
   "label": "HLS historical 2022",
+  "historical": true,
   "data_start_date": "2022-03-02T00:00:00",
   "data_end_date": "2022-03-02T00:30:00",
   "last_attempted_proc_data_date": "1900-01-00T01:00:00",
@@ -14,6 +15,6 @@
   "ingest_s3": "opera-dev-isl-fwd-pyoon",
   "job_queue": "opera-job_worker-hls_data_query",
   "download_job_queue": "opera-job_worker-hls_data_download",
-  "chunk_size": 80
+  "chunk_size": 1
   }
 

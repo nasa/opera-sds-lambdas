@@ -14,6 +14,6 @@
   "ingest_s3": "opera-dev-isl-fwd-pyoon",
   "job_queue": "opera-job_worker-hls_data_query",
   "download_job_queue": "opera-job_worker-hls_data_download",
-  "chunk_size": 80
+  "chunk_size": 1
   }
 
