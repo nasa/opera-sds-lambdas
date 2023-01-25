@@ -1,7 +1,8 @@
  {
   "enabled": true,
-  "label": "HLS historical 2022",
-  "historical": true,
+  "label": "HLS 2022",
+  "historical": false,
+  "temporal": true,
   "data_start_date": "2022-03-02T00:00:00",
   "data_end_date": "2022-03-02T00:30:00",
   "last_attempted_proc_data_date": "1900-01-00T01:00:00",
