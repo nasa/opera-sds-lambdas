@@ -18,17 +18,19 @@ import logging
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
 
-# Requires these 4 env variables
+# Requires these 5 env variables
 _ENV_MOZART_IP = "MOZART_IP"
 _ENV_GRQ_IP = "GRQ_IP"
+_ENV_GRQ_ES_PORT = "GRQ_ES_PORT"
 _ENV_ENDPOINT = "ENDPOINT"
 _ENV_JOB_RELEASE = "JOB_RELEASE"
 
-for ev in [_ENV_MOZART_IP, _ENV_GRQ_IP, _ENV_ENDPOINT, _ENV_JOB_RELEASE]:
+for ev in [_ENV_MOZART_IP, _ENV_GRQ_IP, _ENV_ENDPOINT, _ENV_JOB_RELEASE, _ENV_GRQ_ES_PORT]:
     if ev not in os.environ:
         raise RuntimeError("Need to specify %s in environment." % ev)
 MOZART_IP = os.environ[_ENV_MOZART_IP]
 GRQ_IP = os.environ[_ENV_GRQ_IP]
+GRQ_ES_PORT = os.environ[_ENV_GRQ_ES_PORT]
 ENDPOINT = os.environ[_ENV_ENDPOINT]
 JOB_RELEASE = os.environ[_ENV_JOB_RELEASE]
 
@@ -38,7 +40,7 @@ JOB_SUBMIT_URL = "%s/api/v0.1/job/submit?enable_dedup=false" % MOZART_URL
 ES_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 ES_INDEX = 'batch_proc'
 LOGGER = logging.getLogger(ES_INDEX)
-eu = ElasticsearchUtility('http://%s:9200' % GRQ_IP, LOGGER)
+eu = ElasticsearchUtility('http://%s:%s' % (GRQ_IP, str(GRQ_ES_PORT)), LOGGER)
 
 print("Loading Lambda function")
 
