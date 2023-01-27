@@ -83,6 +83,7 @@ def lambda_handler(event: Dict, context: LambdaContext):
     query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
 
     provider = os.environ["PROVIDER"]
+    bounding_box = os.environ.get("BOUNDING_BOX")
 
     job_type = os.environ["JOB_TYPE"]
     job_release = os.environ["JOB_RELEASE"]
@@ -93,7 +94,6 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "end_datetime": f"--end-date={query_end_datetime.strftime(DATETIME_FORMAT)}",
         "provider": f"-p {provider}",
         "endpoint": f'--endpoint={os.environ["ENDPOINT"]}',
-        "bounding_box": "",
         "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
         "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
         "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
@@ -101,7 +101,8 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
         "use_temporal": "",
-        "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", "")
+        "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", ""),
+        "bounding_box": f'--bounds={bounding_box}' if bounding_box else ""
     }
     
     tags = ["data-subscriber-query-timer"]
