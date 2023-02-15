@@ -1,0 +1,4 @@
+aws-lambda-powertools
+requests>=2.22.0
+python-dateutil
+hysds-commons @ https://github.com/hysds/hysds_commons/archive/refs/tags/v1.0.9.tar.gz
