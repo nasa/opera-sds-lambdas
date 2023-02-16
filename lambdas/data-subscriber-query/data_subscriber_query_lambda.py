@@ -82,7 +82,6 @@ def lambda_handler(event: Dict, context: LambdaContext):
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
 
-    provider = os.environ["PROVIDER"]
     bounding_box = os.environ.get("BOUNDING_BOX")
 
     job_type = os.environ["JOB_TYPE"]
@@ -92,7 +91,6 @@ def lambda_handler(event: Dict, context: LambdaContext):
     job_params = {
         "start_datetime": f"--start-date={query_start_datetime.strftime(DATETIME_FORMAT)}",
         "end_datetime": f"--end-date={query_end_datetime.strftime(DATETIME_FORMAT)}",
-        "provider": f"-p {provider}",
         "endpoint": f'--endpoint={os.environ["ENDPOINT"]}',
         "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
         "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
