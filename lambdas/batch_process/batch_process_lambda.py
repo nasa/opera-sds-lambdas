@@ -154,11 +154,9 @@ def batch_proc_once():
 
         print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
         # Submit the job
-        provider = p.provider_name
         job_type = p.job_type
         job_release = JOB_RELEASE
         queue = p.job_queue
-        isl_bucket_name = p.ingest_s3
         end_point = ENDPOINT
         download_job_queue = p.download_job_queue
         try:
@@ -180,10 +178,8 @@ def batch_proc_once():
             historical = False
         job_spec = "job-%s:%s" % (job_type, job_release)
         job_params = {
-            "isl_bucket_name": f"--isl-bucket={isl_bucket_name}",
             "start_datetime": f"--start-date={convert_datetime(s_date)}",
             "end_datetime": f"--end-date={convert_datetime(e_date)}",
-            "provider": f"-p {provider}",
             "endpoint": f'--endpoint={end_point}',
             "bounding_box": "",
             "download_job_release": f'--release-version={job_release}',
