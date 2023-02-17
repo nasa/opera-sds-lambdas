@@ -53,3 +53,7 @@ popd
 pushd ${WORKSPACE}/lambdas/data-subscriber-query
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_query_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
+
+pushd ${WORKSPACE}/lambdas/batch_process
+python setup.py package --version ${TAG} --workspace workspace --lambda-func batch_process_lambda.py --package-dir ${WORKSPACE}/lambda_packages
+popd
