@@ -1,0 +1,19 @@
+ {
+  "enabled": true,
+  "label": "HLS 2022",
+  "historical": false,
+  "temporal": true,
+  "data_start_date": "2022-03-02T00:00:00",
+  "data_end_date": "2022-03-02T00:30:00",
+  "last_attempted_proc_data_date": "1900-01-00T01:00:00",
+  "last_successful_proc_data_date": "1900-01-01T01:00:00",
+  "last_run_date": "1900-01-01T12:57:01",
+  "data_date_incr_mins": 5,
+  "run_interval_mins": 1,
+  "job_type": "hlss30_query",
+  "collection_short_name": "HLSS30",
+  "job_queue": "opera-job_worker-hls_data_query",
+  "download_job_queue": "opera-job_worker-hls_data_download",
+  "chunk_size": 1
+  }
+
