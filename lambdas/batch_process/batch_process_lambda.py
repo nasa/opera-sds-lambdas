@@ -167,15 +167,15 @@ def batch_proc_once():
         except:
             print("Temporal parameter not found in batch proc. Defaulting to false.")
             temporal = False
+
         try:
-            if p.historical is True:
-                historical = True
+            processing_mode = p.processing_mode
+            if p.processing_mode == "historical":
                 temporal = True     # temporal is always true for historical processing
-            else:
-                historical = False
         except:
-            print("Historical parameter not found in batch proc. Defaulting to false.")
-            historical = False
+            print("processing_mode parameter not found in batch proc. Defaulting to forward.")
+            processing_mode = 'forward'
+
         job_spec = "job-%s:%s" % (job_type, job_release)
         job_params = {
             "start_datetime": f"--start-date={convert_datetime(s_date)}",
@@ -185,7 +185,7 @@ def batch_proc_once():
             "download_job_release": f'--release-version={job_release}',
             "download_job_queue": f'--job-queue={download_job_queue}',
             "chunk_size": f'--chunk-size={p.chunk_size}',
-            "historical": f'--north-america-only' if historical is True else '',
+            "processing_mode": f'--processing-mode={processing_mode}',
             "smoke_run": "",
             "dry_run": "",
             "no_schedule_download": "",
@@ -193,7 +193,7 @@ def batch_proc_once():
         }
 
         tags = ["data-subscriber-query-timer"]
-        if historical is True:
+        if processing_mode == 'historical':
             tags.append("historical_processing")
         else:
             tags.append("batch_processing")

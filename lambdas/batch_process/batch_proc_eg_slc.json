@@ -1,10 +1,10 @@
  {
   "enabled": true,
   "label": "SLC 1A Historical",
-  "historical": true,
+  "processing_mode": "historical",
   "temporal": true,
   "data_start_date": "2020-01-01T00:00:00",
-  "data_end_date": "2020-01-01T00:10:00",
+  "data_end_date": "2020-01-01T00:30:00",
   "last_attempted_proc_data_date": "1900-01-00T01:00:00",
   "last_successful_proc_data_date": "1900-01-01T01:00:00",
   "last_run_date": "1900-01-01T12:57:01",
