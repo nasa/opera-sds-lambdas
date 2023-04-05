@@ -112,19 +112,15 @@ def lambda_handler(event: Dict, context: LambdaContext):
 
 
 def get_temporal_start_datetime(query_end_datetime):
-    if not strtobool(os.environ["USE_TEMPORAL"]):
-        return None
-
     try:
         temporal_start_datetime_margin_days = os.environ.get("TEMPORAL_START_DATETIME_MARGIN_DAYS", "")
         temporal_start_datetime = (query_end_datetime - relativedelta(days=int(temporal_start_datetime_margin_days))).strftime(DATETIME_FORMAT)
         logger.info(f"Using TEMPORAL_START_DATETIME_MARGIN_DAYS={temporal_start_datetime_margin_days}")
     except Exception:
         logger.warning("Exception while parsing TEMPORAL_START_DATETIME_MARGIN_DAYS. Falling back to TEMPORAL_START_DATETIME. Ignore if this was intentional.")
+
         temporal_start_datetime = os.environ.get("TEMPORAL_START_DATETIME", "")
-        if temporal_start_datetime:
-            logger.info(f"Using TEMPORAL_START_DATETIME={temporal_start_datetime}")
-            pass
-        else:
-            raise Exception("USE_TEMPORAL requires corresponding value for either TEMPORAL_START_DATETIME_MARGIN_DAYS or TEMPORAL_START_DATETIME")
+        logger.info(f"Using TEMPORAL_START_DATETIME={temporal_start_datetime}")
+
+    logger.info(f'{temporal_start_datetime=}')
     return temporal_start_datetime

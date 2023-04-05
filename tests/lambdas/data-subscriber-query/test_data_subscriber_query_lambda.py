@@ -51,17 +51,18 @@ def test_lambda_handler(mocker: MockerFixture, monkeypatch: MonkeyPatch):
     assert response == 200
 
 
-def test_get_temporal_start_datetime__when_use_temporal_is_empty_string__then_throws_exception(monkeypatch):
+def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_empty_string__and_no_temporal_value_given__then_returns_empty_string(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "")
 
+    # ACT
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+
     # ASSERT
-    with pytest.raises(Exception):
-        # ACT
-        temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    assert temporal_start_datetime == ""
 
 
-def test_get_temporal_start_datetime__when_use_temporal_is_false__then_returns_none(monkeypatch):
+def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_false__and_no_temporal_value_given__then_returns_empty_string(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "false")
 
@@ -69,17 +70,18 @@ def test_get_temporal_start_datetime__when_use_temporal_is_false__then_returns_n
     temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
 
     # ASSERT
-    assert temporal_start_datetime == None
+    assert temporal_start_datetime == ""
 
 
-def test_get_temporal_start_datetime__when_use_temporal_is_true__but_no_temporal_value_given__then_throws_exception(monkeypatch):
+def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_true__but_no_temporal_value_given__then_returns_empty_string(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "true")
 
+    # ACT
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+
     # ASSERT
-    with pytest.raises(Exception):
-        # ACT
-        temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    assert temporal_start_datetime == ""
 
 
 def test_get_temporal_start_datetime__when_margin_given__then_returns_updated_datetime(monkeypatch):
@@ -117,4 +119,3 @@ def test_get_temporal_start_datetime__when_both_margin_and_datetime_are_given__t
 
     # ASSERT
     assert temporal_start_datetime == "2022-12-29T00:00:00Z"
-
