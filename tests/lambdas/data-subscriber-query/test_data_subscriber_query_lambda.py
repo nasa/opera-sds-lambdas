@@ -51,7 +51,7 @@ def test_lambda_handler(mocker: MockerFixture, monkeypatch: MonkeyPatch):
     assert response == 200
 
 
-def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_empty_string__and_no_temporal_value_given__then_returns_empty_string(monkeypatch):
+def test_get_temporal_start_datetime__when_USE_TEMPORAL_is_empty_string__and_no_temporal_value_given__then_returns_empty_string(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "")
 
@@ -62,7 +62,7 @@ def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_empty_string__and_no_
     assert temporal_start_datetime == ""
 
 
-def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_false__and_no_temporal_value_given__then_returns_empty_string(monkeypatch):
+def test_get_temporal_start_datetime__when_USE_TEMPORAL_is_false__and_no_temporal_value_given__then_returns_empty_string(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "false")
 
@@ -73,7 +73,7 @@ def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_false__and_no_tempora
     assert temporal_start_datetime == ""
 
 
-def test_get_temporal_start_datetime__WHEN_USE_TEMPORAL_is_true__but_no_temporal_value_given__then_returns_empty_string(monkeypatch):
+def test_get_temporal_start_datetime__when_USE_TEMPORAL_is_true__but_no_temporal_value_given__then_returns_empty_string(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "true")
 
