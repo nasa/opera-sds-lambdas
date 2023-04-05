@@ -82,6 +82,8 @@ def lambda_handler(event: Dict, context: LambdaContext):
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
 
+    temporal_start_datetime = get_temporal_start_datetime(query_end_datetime)
+
     bounding_box = os.environ.get("BOUNDING_BOX")
 
     job_type = os.environ["JOB_TYPE"]
@@ -98,8 +100,8 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
-        "use_temporal": "",
-        "temporal_start_datetime": os.environ.get("TEMPORAL_START_DATETIME", ""),
+        "use_temporal": f'{"--use-temporal" if strtobool(os.environ["USE_TEMPORAL"]) else ""}',
+        "temporal_start_datetime": f'--temporal-start-date={temporal_start_datetime}' if temporal_start_datetime else "",
         "bounding_box": f'--bounds={bounding_box}' if bounding_box else ""
     }
     
@@ -107,3 +109,18 @@ def lambda_handler(event: Dict, context: LambdaContext):
     job_name = f"data-subscriber-query-timer-{datetime.utcnow().strftime(JOB_NAME_DATETIME_FORMAT)}_{minutes}"
     # submit mozart job
     return submit_job(job_name, job_spec, job_params, queue, tags)
+
+
+def get_temporal_start_datetime(query_end_datetime):
+    try:
+        temporal_start_datetime_margin_days = os.environ.get("TEMPORAL_START_DATETIME_MARGIN_DAYS", "")
+        temporal_start_datetime = (query_end_datetime - relativedelta(days=int(temporal_start_datetime_margin_days))).strftime(DATETIME_FORMAT)
+        logger.info(f"Using TEMPORAL_START_DATETIME_MARGIN_DAYS={temporal_start_datetime_margin_days}")
+    except Exception:
+        logger.warning("Exception while parsing TEMPORAL_START_DATETIME_MARGIN_DAYS. Falling back to TEMPORAL_START_DATETIME. Ignore if this was intentional.")
+
+        temporal_start_datetime = os.environ.get("TEMPORAL_START_DATETIME", "")
+        logger.info(f"Using TEMPORAL_START_DATETIME={temporal_start_datetime}")
+
+    logger.info(f'{temporal_start_datetime=}')
+    return temporal_start_datetime
