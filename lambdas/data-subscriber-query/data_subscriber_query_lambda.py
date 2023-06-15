@@ -64,23 +64,22 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
     else:
         raise Exception(f"job not submitted successfully: {result}")
 
-
-def lambda_handler(event: Dict, context: LambdaContext):
-    """
-    This lambda handler calls submit_job with the job type info
-    and dataset_type set in the environment
-    """
-
-    logger.info(f"Got event of type: {type(event)}")
-    logger.info(f"Got event: {json.dumps(event)}")
-    logger.info(f"Got context: {context}")
-    logger.info(f"os.environ: {os.environ}")
-
+def _create_job(event: Dict):
     event = EventBridgeEvent(event)
+
     query_end_datetime = dateutil.parser.isoparse(event.time)
 
+    # Offset the revision start and stop time if specified
+    try:
+        revision_offset_mins = os.environ["REVISION_START_DATETIME_MARGIN_MINS"]
+        query_end_datetime = query_end_datetime - relativedelta(minutes=int(revision_offset_mins))
+        logger.info(f"Using REVISION_START_DATETIME_MARGIN_MINS={revision_offset_mins}")
+    except Exception:
+        logger.warning(
+            "Exception while parsing REVISION_START_DATETIME_MARGIN_MINS. Using default value of 0. Ignore if this was intentional.")
+
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
-    query_start_datetime = query_end_datetime + relativedelta(minutes=-int(minutes))
+    query_start_datetime = query_end_datetime - relativedelta(minutes=int(minutes))
 
     temporal_start_datetime = get_temporal_start_datetime(query_end_datetime)
 
@@ -104,9 +103,25 @@ def lambda_handler(event: Dict, context: LambdaContext):
         "temporal_start_datetime": f'--temporal-start-date={temporal_start_datetime}' if temporal_start_datetime else "",
         "bounding_box": f'--bounds={bounding_box}' if bounding_box else ""
     }
-    
+
     tags = ["data-subscriber-query-timer"]
     job_name = f"data-subscriber-query-timer-{datetime.utcnow().strftime(JOB_NAME_DATETIME_FORMAT)}_{minutes}"
+
+    return job_name, job_spec, job_params, queue, tags
+
+def lambda_handler(event: Dict, context: LambdaContext):
+    """
+    This lambda handler calls submit_job with the job type info
+    and dataset_type set in the environment
+    """
+
+    logger.info(f"Got event of type: {type(event)}")
+    logger.info(f"Got event: {json.dumps(event)}")
+    logger.info(f"Got context: {context}")
+    logger.info(f"os.environ: {os.environ}")
+
+    job_name, job_spec, job_params, queue, tags = _create_job(event)
+
     # submit mozart job
     return submit_job(job_name, job_spec, job_params, queue, tags)
 
