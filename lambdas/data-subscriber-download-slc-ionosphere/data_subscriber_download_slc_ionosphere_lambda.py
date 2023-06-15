@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime
+from typing import Dict
 
 import dateutil.parser
 import requests
@@ -56,7 +57,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         raise Exception(f"job not submitted successfully: {result}")
 
 
-def _create_job(event: dict):
+def _create_job(event: Dict):
     event = EventBridgeEvent(event)
 
     # NOTE: ionosphere correction files may not be available for up to 30 hours after SLC product availability
@@ -84,7 +85,7 @@ def _create_job(event: dict):
     return job_name, job_spec, job_params, queue, tags
 
 
-def lambda_handler(event: dict, context: LambdaContext):
+def lambda_handler(event: Dict, context: LambdaContext):
     """
     This lambda handler calls submit_job with the job type info
     and dataset_type set in the environment
