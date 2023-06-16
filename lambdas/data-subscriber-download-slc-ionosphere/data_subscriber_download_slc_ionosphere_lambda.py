@@ -60,7 +60,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
 def _create_job(event: Dict):
     event = EventBridgeEvent(event)
 
-    # NOTE: ionosphere correction files may not be available for up to 30 hours after SLC product availability
+    # NOTE: ionosphere correction files may not be available for up to 36 hours after SLC product availability
     #  Set offsets accordingly.
 
     query_end_datetime_offset_hours = int(os.environ["QUERY_END_DATETIME_OFFSET_HOURS"])
