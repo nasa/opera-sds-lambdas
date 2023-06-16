@@ -71,17 +71,17 @@ def _create_job(event: Dict):
 
     job_type = os.environ["JOB_TYPE"]
     job_release = os.environ["JOB_RELEASE"]
+
+    job_name = f"data-subscriber-download-slc-ionosphere-timer-{datetime.utcnow().strftime(JOB_NAME_DATETIME_FORMAT)}_{query_start_datetime_offset_hours}"
+    job_spec = f"job-{job_type}:{job_release}"
     job_params = {
         "start_datetime": f"--start-date={query_start_datetime.strftime(DATETIME_ISO_8601_FORMAT)}",
         "end_datetime": f"--end-date={query_end_datetime.strftime(DATETIME_ISO_8601_FORMAT)}",
         "cslc_job_release": f'--release-version={job_release}'
     }
-
-    tags = ["data-subscriber-download-slc-ionosphere-timer"]
-    job_name = f"data-subscriber-download-slc-ionosphere-timer-{datetime.utcnow().strftime(JOB_NAME_DATETIME_FORMAT)}_{query_start_datetime_offset_hours}"
-
-    job_spec = f"job-{job_type}:{job_release}"
     queue = os.environ["JOB_QUEUE"]
+    tags = ["data-subscriber-download-slc-ionosphere-timer"]
+
     return job_name, job_spec, job_params, queue, tags
 
 
