@@ -50,6 +50,10 @@ pushd ${WORKSPACE}/lambdas/data-subscriber-download
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_download_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
+pushd ${WORKSPACE}/lambdas/data-subscriber-download-slc-ionosphere
+python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_download_slc_ionosphere_lambda.py --package-dir ${WORKSPACE}/lambda_packages
+popd
+
 pushd ${WORKSPACE}/lambdas/data-subscriber-query
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_query_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
