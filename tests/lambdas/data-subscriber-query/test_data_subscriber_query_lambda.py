@@ -32,6 +32,7 @@ os.environ = {
     "ENDPOINT": "dummy_endpoint",
     "DOWNLOAD_JOB_QUEUE": "dummy_download_job_queue",
     "CHUNK_SIZE": "dummy_chunk_size",
+    "MAX_REVISION": "1000",
     "SMOKE_RUN": "true",
     "DRY_RUN": "true",
     "NO_SCHEDULE_DOWNLOAD": "true"
@@ -140,6 +141,7 @@ def test_create_job_revision_margin(monkeypatch):
     # ARRANGE
     monkeypatch.setenv("USE_TEMPORAL", "false")
     monkeypatch.setenv("REVISION_START_DATETIME_MARGIN_MINS", "60")
+    monkeypatch.setenv("MAX_REVISION", "3")
 
     job_name, job_spec, job_params, queue, tags = data_subscriber_query._create_job(event)
 
@@ -149,3 +151,4 @@ def test_create_job_revision_margin(monkeypatch):
 
     assert job_params['start_datetime'] == '--start-date='+'1969-12-31T22:00:00Z'
     assert job_params['end_datetime'] == '--end-date=' + '1969-12-31T23:00:00Z'
+    assert job_params['max_revision'] == "--max-revision=3"

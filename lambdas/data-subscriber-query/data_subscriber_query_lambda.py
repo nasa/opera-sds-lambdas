@@ -96,6 +96,7 @@ def _create_job(event: Dict):
         "download_job_release": f'--release-version={os.environ["JOB_RELEASE"]}',
         "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
         "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
+        "max_revision": f'--max-revision={os.environ["MAX_REVISION"]}',
         "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
