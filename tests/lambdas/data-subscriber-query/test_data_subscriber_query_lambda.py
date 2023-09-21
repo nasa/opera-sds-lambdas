@@ -7,28 +7,7 @@ import pytest
 from pytest_mock import MockerFixture
 from _pytest.monkeypatch import MonkeyPatch
 
-os.environ = {
-    "MOZART_URL": "dummy_mozart_url",
-    "MINUTES": "60",
-    "PROVIDER": "dummy_provider",
-    "JOB_TYPE": "dummy_job_type",
-    "JOB_RELEASE": "dummy_job_release",
-    "JOB_QUEUE": "dummy_job_queue",
-    "ISL_BUCKET_NAME": "dummy_isl_bucket",
-    "ENDPOINT": "dummy_endpoint",
-    "DOWNLOAD_JOB_QUEUE": "dummy_download_job_queue",
-    "CHUNK_SIZE": "dummy_chunk_size",
-    "SMOKE_RUN": "true",
-    "DRY_RUN": "true",
-    "NO_SCHEDULE_DOWNLOAD": "true"
-}
-
-data_subscriber_query = importlib.import_module("lambdas.data-subscriber-query.data_subscriber_query_lambda")
-
-
-def test_lambda_handler(mocker: MockerFixture, monkeypatch: MonkeyPatch):
-    # ARRANGE
-    event = {
+event = {
         "id": "cdc73f9d-aea9-11e3-9d5a-835b769c0d9c",
         "detail-type": "Scheduled Event",
         "source": "aws.events",
@@ -40,6 +19,31 @@ def test_lambda_handler(mocker: MockerFixture, monkeypatch: MonkeyPatch):
         ],
         "detail": {}
     }
+
+os.environ = {
+    "MOZART_URL": "dummy_mozart_url",
+    "MINUTES": "60",
+    "REVISION_START_DATETIME_MARGIN_MINS": "0",
+    "PROVIDER": "dummy_provider",
+    "JOB_TYPE": "dummy_job_type",
+    "JOB_RELEASE": "dummy_job_release",
+    "JOB_QUEUE": "dummy_job_queue",
+    "ISL_BUCKET_NAME": "dummy_isl_bucket",
+    "ENDPOINT": "dummy_endpoint",
+    "DOWNLOAD_JOB_QUEUE": "dummy_download_job_queue",
+    "CHUNK_SIZE": "dummy_chunk_size",
+    "MAX_REVISION": "1000",
+    "SMOKE_RUN": "true",
+    "DRY_RUN": "true",
+    "NO_SCHEDULE_DOWNLOAD": "true"
+}
+
+data_subscriber_query = importlib.import_module("lambdas.data-subscriber-query.data_subscriber_query_lambda")
+
+
+
+def test_lambda_handler(mocker: MockerFixture, monkeypatch: MonkeyPatch):
+    # ARRANGE
     context = MagicMock()
     mocker.patch(data_subscriber_query.__name__ + ".submit_job", return_value=200)
     monkeypatch.setenv("USE_TEMPORAL", "false")
@@ -119,3 +123,32 @@ def test_get_temporal_start_datetime__when_both_margin_and_datetime_are_given__t
 
     # ASSERT
     assert temporal_start_datetime == "2022-12-29T00:00:00Z"
+
+def test_create_job_simple(monkeypatch):
+    # ARRANGE
+    monkeypatch.setenv("USE_TEMPORAL", "false")
+
+    job_name, job_spec, job_params, queue, tags = data_subscriber_query._create_job(event)
+
+    job_type = os.environ["JOB_TYPE"]
+    job_release = os.environ["JOB_RELEASE"]
+    assert job_spec == f"job-{job_type}:{job_release}"
+
+    assert job_params['start_datetime'] == '--start-date='+'1969-12-31T23:00:00Z'
+    assert job_params['end_datetime'] == '--end-date=' + '1970-01-01T00:00:00Z'
+
+def test_create_job_revision_margin(monkeypatch):
+    # ARRANGE
+    monkeypatch.setenv("USE_TEMPORAL", "false")
+    monkeypatch.setenv("REVISION_START_DATETIME_MARGIN_MINS", "60")
+    monkeypatch.setenv("MAX_REVISION", "3")
+
+    job_name, job_spec, job_params, queue, tags = data_subscriber_query._create_job(event)
+
+    job_type = os.environ["JOB_TYPE"]
+    job_release = os.environ["JOB_RELEASE"]
+    assert job_spec == f"job-{job_type}:{job_release}"
+
+    assert job_params['start_datetime'] == '--start-date='+'1969-12-31T22:00:00Z'
+    assert job_params['end_datetime'] == '--end-date=' + '1969-12-31T23:00:00Z'
+    assert job_params['max_revision'] == "--max-revision=3"

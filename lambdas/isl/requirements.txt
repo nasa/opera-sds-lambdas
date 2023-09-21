@@ -1,2 +1,6 @@
-requests==2.22.0
+requests==2.31.0
 datetime
+
+# urllib3 contains an incompatible change. pinning such that we stay on urllib3 1.x
+urllib3<2
+
