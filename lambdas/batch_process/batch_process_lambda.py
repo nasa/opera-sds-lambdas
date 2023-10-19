@@ -219,7 +219,7 @@ def batch_proc_once():
 
         # submit mozart job
         print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
-		job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
+        job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
 
         # Update last_successful_proc_data_date here
         eu.update_document(id=doc_id,
