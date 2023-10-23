@@ -92,6 +92,66 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         raise Exception("job not submitted successfully: %s" % result)
 
 
+def form_job_params(p, s_date, e_date):
+    end_point = ENDPOINT
+    download_job_queue = p.download_job_queue
+    try:
+        if p.temporal is True:
+            temporal = True
+        else:
+            temporal = False
+    except:
+        print("Temporal parameter not found in batch proc. Defaulting to false.")
+        temporal = False
+
+    try:
+        processing_mode = p.processing_mode
+        if p.processing_mode == "historical":
+            temporal = True  # temporal is always true for historical processing
+    except:
+        print("processing_mode parameter not found in batch proc. Defaulting to forward.")
+        processing_mode = 'forward'
+
+    job_spec = "job-%s:%s" % (p.job_type, JOB_RELEASE)
+    job_params = {
+        "start_datetime": f"--start-date={convert_datetime(s_date)}",
+        "end_datetime": f"--end-date={convert_datetime(e_date)}",
+        "endpoint": f'--endpoint={end_point}',
+        "bounding_box": "",
+        "download_job_release": f'--release-version={JOB_RELEASE}',
+        "download_job_queue": f'--job-queue={download_job_queue}',
+        "chunk_size": f'--chunk-size={p.chunk_size}',
+        "processing_mode": f'--processing-mode={processing_mode}',
+        "smoke_run": "",
+        "dry_run": "",
+        "no_schedule_download": "",
+        "use_temporal": f'--use-temporal' if temporal is True else ''
+    }
+
+    # Include and exclude regions are optional
+    try:
+        includes = p.include_regions
+        if len(includes.strip()) > 0:
+            job_params["include_regions"] = f'--include-regions={includes}'
+    except:
+        pass
+    try:
+        excludes = p.exclude_regions
+        if len(excludes.strip()) > 0:
+            job_params["exclude_regions"] = f'--exclude-regions={excludes}'
+    except:
+        pass
+
+    tags = ["data-subscriber-query-timer"]
+    if processing_mode == 'historical':
+        tags.append("historical_processing")
+    else:
+        tags.append("batch_processing")
+    job_name = "data-subscriber-query-timer-{}_{}-{}".format(p.label, s_date.strftime(ES_DATETIME_FORMAT),
+                                                             e_date.strftime(ES_DATETIME_FORMAT))
+
+    return job_name, job_spec, job_params, tags
+
 def batch_proc_once():
     procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
     for proc in procs:
@@ -152,55 +212,14 @@ def batch_proc_once():
                                      "last_attempted_proc_data_date": e_date, }},
                            index=ES_INDEX)
 
-        print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
-        # Submit the job
-        job_type = p.job_type
-        job_release = JOB_RELEASE
-        queue = p.job_queue
-        end_point = ENDPOINT
-        download_job_queue = p.download_job_queue
-        try:
-            if p.temporal is True:
-                temporal = True
-            else:
-                temporal = False
-        except:
-            print("Temporal parameter not found in batch proc. Defaulting to false.")
-            temporal = False
 
-        try:
-            processing_mode = p.processing_mode
-            if p.processing_mode == "historical":
-                temporal = True     # temporal is always true for historical processing
-        except:
-            print("processing_mode parameter not found in batch proc. Defaulting to forward.")
-            processing_mode = 'forward'
+        # Compute job parameters
+        (job_name, job_spec, job_params, job_tags) = form_job_params(p, s_date, e_date)
+        #return job_params
 
-        job_spec = "job-%s:%s" % (job_type, job_release)
-        job_params = {
-            "start_datetime": f"--start-date={convert_datetime(s_date)}",
-            "end_datetime": f"--end-date={convert_datetime(e_date)}",
-            "endpoint": f'--endpoint={end_point}',
-            "bounding_box": "",
-            "download_job_release": f'--release-version={job_release}',
-            "download_job_queue": f'--job-queue={download_job_queue}',
-            "chunk_size": f'--chunk-size={p.chunk_size}',
-            "processing_mode": f'--processing-mode={processing_mode}',
-            "smoke_run": "",
-            "dry_run": "",
-            "no_schedule_download": "",
-            "use_temporal": f'--use-temporal' if temporal is True else ''
-        }
-
-        tags = ["data-subscriber-query-timer"]
-        if processing_mode == 'historical':
-            tags.append("historical_processing")
-        else:
-            tags.append("batch_processing")
-        job_name = "data-subscriber-query-timer-{}_{}-{}".format(p.label, s_date.strftime(ES_DATETIME_FORMAT),
-                                                                 e_date.strftime(ES_DATETIME_FORMAT))
         # submit mozart job
-        job_success = submit_job(job_name, job_spec, job_params, queue, tags)
+        print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
+        job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
 
         # Update last_successful_proc_data_date here
         eu.update_document(id=doc_id,
