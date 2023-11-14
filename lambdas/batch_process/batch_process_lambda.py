@@ -67,10 +67,11 @@ def process_disp_frame_burst_json(file):
     # Note that we are using integer as the dict key instead of the original string so that it can be sorted
     # more predictably
     for frame_id in frame_ids:
-        frame_data[int(frame_id)]=SimpleNamespace(**data[frame_id])
+        frame_data[int(frame_id)]=SimpleNamespace(**(data[frame_id]))
 
-    frame_data = dict(sorted(frame_data.items()))
-    return frame_data, metadata, version
+    sorted_frame_data = dict(sorted(frame_data.items()))
+
+    return sorted_frame_data, metadata, version
 
 def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
@@ -155,6 +156,22 @@ def form_job_params(p, s_date, e_date, disp_frame_map):
         "use_temporal": f'--use-temporal' if temporal is True else ''
     }
 
+    # For CSLC input data, which is for DISP-S1 production, we need to do perform more logic
+    # Frame numbers are 1-based and inclusive on both ends of the range
+    if p.collection_short_name in CSLC_COLLECTIONS:
+        try:
+            last_frame = p.last_successful_proc_frame
+        except Exception:
+            last_frame = 0
+
+        max_frame = len(disp_frame_map)
+        start_frame = last_frame + 1
+        end_frame = start_frame + p.frames_per_query - 1
+        if end_frame > max_frame:
+            end_frame = max_frame
+
+        job_params["frame_range"] = f'--frame-range={start_frame},{end_frame}'
+
     # Include and exclude regions are optional
     try:
         includes = p.include_regions
@@ -179,6 +196,17 @@ def form_job_params(p, s_date, e_date, disp_frame_map):
 
     return job_name, job_spec, job_params, tags
 
+def get_e_date(s_date, p):
+    if p.collection_short_name in HLS_SLC_COLLECTIONS:
+        # End date time is when the start data time plus data increment time in minutes.
+        e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
+    elif p.collection_short_name in CSLC_COLLECTIONS:
+        # For CSLC historical processing we increment the data by k*12 day
+        e_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
+    else:
+        raise RuntimeError("Unknown collection %s ." % p.collection_short_name)
+
+    return e_date
 def batch_proc_once(disp_frame_map):
     procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
     for proc in procs:
@@ -215,13 +243,7 @@ def batch_proc_once(disp_frame_map):
         if s_date < data_start_date:
             s_date = data_start_date
 
-        if p.collection_short_name in HLS_SLC_COLLECTIONS:
-            # End date time is when the start data time plus data increment time in minutes.
-            e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
-
-        elif p.collection_short_name in CSLC_COLLECTIONS:
-            # For CSLC historical processing we increment the data by k*12 day
-            e_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
+        e_date = get_e_date(s_date, p)
 
         # If this is after the data end time, which would be the case when this is the very last iteration of this proc,
         # change it to the data end time.
@@ -238,6 +260,10 @@ def batch_proc_once(disp_frame_map):
                                index=ES_INDEX)
             continue
 
+        # Compute job parameters
+        (job_name, job_spec, job_params, job_tags) = form_job_params(p, s_date, e_date, disp_frame_map)
+        # return job_params
+
         # update last_attempted_proc_data_date here
         eu.update_document(id=doc_id,
                            body={"doc_as_upsert": True,
@@ -245,10 +271,14 @@ def batch_proc_once(disp_frame_map):
                                      "last_attempted_proc_data_date": e_date, }},
                            index=ES_INDEX)
 
-
-        # Compute job parameters
-        (job_name, job_spec, job_params, job_tags) = form_job_params(p, s_date, e_date, disp_frame_map)
-        #return job_params
+        # If we are processing CSLC we need to update proc_frame info
+        if "frame_range" in job_params:
+            last_proc_frame = int(job_params["frame_range"].split(",")[1])
+            eu.update_document(id=doc_id,
+                               body={"doc_as_upsert": True,
+                                     "doc": {
+                                         "last_attempted_proc_frame": last_proc_frame, }},
+                               index=ES_INDEX)
 
         # submit mozart job
         print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
@@ -260,6 +290,14 @@ def batch_proc_once(disp_frame_map):
                                  "doc": {
                                      "last_successful_proc_data_date": e_date, }},
                            index=ES_INDEX)
+
+        # If we are processing CSLC we need to update proc_frame info. last_proc_frame was defined earlier
+        if "frame_range" in job_params:
+            eu.update_document(id=doc_id,
+                               body={"doc_as_upsert": True,
+                                     "doc": {
+                                         "last_attempted_proc_frame": last_proc_frame, }},
+                               index=ES_INDEX)
 
         return job_success
 
@@ -286,14 +324,14 @@ def lambda_handler(event: Dict, context: LambdaContext):
         s3.Object(ANC_BUCKET, DISP_FRAME_BURST_MAP_JSON).download_file(path)
     except Exception as e:
         raise Exception("Exception while fetching disp frame map json file: %s. " % DISP_FRAME_BURST_MAP_JSON + str(e))
-    disp_frame_map = process_disp_frame_burst_json(path)
+    disp_frame_map, metadata, version = process_disp_frame_burst_json(path)
 
     # submit mozart job
     return batch_proc_once(disp_frame_map)
 
 
 if __name__ == '__main__':
-    disp_frame_map = process_disp_frame_burst_json(DISP_FRAME_BURST_MAP_JSON)
+    disp_frame_map, metadata, version = process_disp_frame_burst_json(DISP_FRAME_BURST_MAP_JSON)
     while (True):
         print(batch_proc_once(disp_frame_map))
         time.sleep(10)
