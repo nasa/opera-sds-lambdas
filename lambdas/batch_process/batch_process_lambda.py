@@ -120,7 +120,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
         raise Exception("job not submitted successfully: %s" % result)
 
 
-def form_job_params(p, s_date, e_date, disp_frame_map):
+def form_job_params(p, disp_frame_map):
     end_point = ENDPOINT
     download_job_queue = p.download_job_queue
     try:
@@ -140,25 +140,14 @@ def form_job_params(p, s_date, e_date, disp_frame_map):
         print("processing_mode parameter not found in batch proc. Defaulting to forward.")
         processing_mode = 'forward'
 
-    job_spec = "job-%s:%s" % (p.job_type, JOB_RELEASE)
-    job_params = {
-        "start_datetime": f"--start-date={convert_datetime(s_date)}",
-        "end_datetime": f"--end-date={convert_datetime(e_date)}",
-        "endpoint": f'--endpoint={end_point}',
-        "bounding_box": "",
-        "download_job_release": f'--release-version={JOB_RELEASE}',
-        "download_job_queue": f'--job-queue={download_job_queue}',
-        "chunk_size": f'--chunk-size={p.chunk_size}',
-        "processing_mode": f'--processing-mode={processing_mode}',
-        "smoke_run": "",
-        "dry_run": "",
-        "no_schedule_download": "",
-        "use_temporal": f'--use-temporal' if temporal is True else ''
-    }
+    data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
+    data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
+    frame_range = ""
 
     # For CSLC input data, which is for DISP-S1 production, we need to do perform more logic
     # Frame numbers are 1-based and inclusive on both ends of the range
     if p.collection_short_name in CSLC_COLLECTIONS:
+        #TODO: Still need to work on this logic. Move on to the next date range only if we are end of frames
         try:
             last_frame = p.last_successful_proc_frame
         except Exception:
@@ -170,7 +159,46 @@ def form_job_params(p, s_date, e_date, disp_frame_map):
         if end_frame > max_frame:
             end_frame = max_frame
 
-        job_params["frame_range"] = f'--frame-range={start_frame},{end_frame}'
+        frame_range = f'--frame-range={start_frame},{end_frame}'
+
+        # For CSLC historical processing we increment the data by k*12 day
+        e_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
+
+    elif p.collection_short_name in HLS_SLC_COLLECTIONS:
+        # Start date time is when the last successful process data time.
+        # If this is before the data start time, which may be the case when this batch_proc is first run,
+        # change it to the data start time.
+        s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
+        if s_date < data_start_date:
+            s_date = data_start_date
+
+        # End date time is when the start data time plus data increment time in minutes.
+        e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
+
+    else:
+        raise RuntimeError("Unknown collection %s ." % p.collection_short_name)
+
+    # If this is after the data end time, which would be the case when this is the very last iteration of this proc,
+    # change it to the data end time.
+    if e_date > data_end_date:
+        e_date = data_end_date
+
+    job_spec = "job-%s:%s" % (p.job_type, JOB_RELEASE)
+    job_params = {
+        "start_datetime": f"--start-date={convert_datetime(s_date)}",
+        "end_datetime": f"--end-date={convert_datetime(e_date)}",
+        "endpoint": f'--endpoint={end_point}',
+        "bounding_box": "",
+        "download_job_release": f'--release-version={JOB_RELEASE}',
+        "download_job_queue": f'--job-queue={download_job_queue}',
+        "chunk_size": f'--chunk-size={p.chunk_size}',
+        "processing_mode": f'--processing-mode={processing_mode}',
+        "frame_range": frame_range,
+        "smoke_run": "",
+        "dry_run": "",
+        "no_schedule_download": "",
+        "use_temporal": f'--use-temporal' if temporal is True else ''
+    }
 
     # Include and exclude regions are optional
     try:
@@ -196,17 +224,6 @@ def form_job_params(p, s_date, e_date, disp_frame_map):
 
     return job_name, job_spec, job_params, tags
 
-def get_e_date(s_date, p):
-    if p.collection_short_name in HLS_SLC_COLLECTIONS:
-        # End date time is when the start data time plus data increment time in minutes.
-        e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
-    elif p.collection_short_name in CSLC_COLLECTIONS:
-        # For CSLC historical processing we increment the data by k*12 day
-        e_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
-    else:
-        raise RuntimeError("Unknown collection %s ." % p.collection_short_name)
-
-    return e_date
 def batch_proc_once(disp_frame_map):
     procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
     for proc in procs:
@@ -233,23 +250,6 @@ def batch_proc_once(disp_frame_map):
                                      "last_run_date": now.strftime(ES_DATETIME_FORMAT), }},
                            index=ES_INDEX)
 
-        data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
-        data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
-
-        # Start date time is when the last successful process data time.
-        # If this is before the data start time, which may be the case when this batch_proc is first run,
-        # change it to the data start time.
-        s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
-        if s_date < data_start_date:
-            s_date = data_start_date
-
-        e_date = get_e_date(s_date, p)
-
-        # If this is after the data end time, which would be the case when this is the very last iteration of this proc,
-        # change it to the data end time.
-        if e_date > data_end_date:
-            e_date = data_end_date
-
         # See if we've reached the end of this batch proc. If so, disable it.
         if s_date >= data_end_date:
             print(p.label, "Batch Proc completed processing. It is now disabled")
@@ -261,8 +261,7 @@ def batch_proc_once(disp_frame_map):
             continue
 
         # Compute job parameters
-        (job_name, job_spec, job_params, job_tags) = form_job_params(p, s_date, e_date, disp_frame_map)
-        # return job_params
+        (job_name, job_spec, job_params, job_tags) = form_job_params(p, disp_frame_map)
 
         # update last_attempted_proc_data_date here
         eu.update_document(id=doc_id,
@@ -296,7 +295,7 @@ def batch_proc_once(disp_frame_map):
             eu.update_document(id=doc_id,
                                body={"doc_as_upsert": True,
                                      "doc": {
-                                         "last_attempted_proc_frame": last_proc_frame, }},
+                                         "last_successful_proc_frame": last_proc_frame, }},
                                index=ES_INDEX)
 
         return job_success
