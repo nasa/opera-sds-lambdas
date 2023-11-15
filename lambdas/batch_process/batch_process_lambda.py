@@ -44,7 +44,6 @@ eu = ElasticsearchUtility('http://%s:%s' % (GRQ_IP, str(GRQ_ES_PORT)), LOGGER)
 
 print("Loading Lambda function")
 
-
 def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
     Converts from a datetime string to a datetime object or vice versa
@@ -104,13 +103,9 @@ def form_job_params(p, s_date, e_date):
         print("Temporal parameter not found in batch proc. Defaulting to false.")
         temporal = False
 
-    try:
-        processing_mode = p.processing_mode
-        if p.processing_mode == "historical":
-            temporal = True  # temporal is always true for historical processing
-    except:
-        print("processing_mode parameter not found in batch proc. Defaulting to forward.")
-        processing_mode = 'forward'
+    processing_mode = p.processing_mode
+    if p.processing_mode == "historical":
+        temporal = True  # temporal is always true for historical processing
 
     job_spec = "job-%s:%s" % (p.job_type, JOB_RELEASE)
     job_params = {
@@ -128,19 +123,14 @@ def form_job_params(p, s_date, e_date):
         "use_temporal": f'--use-temporal' if temporal is True else ''
     }
 
-    # Include and exclude regions are optional
-    try:
-        includes = p.include_regions
-        if len(includes.strip()) > 0:
-            job_params["include_regions"] = f'--include-regions={includes}'
-    except:
-        pass
-    try:
-        excludes = p.exclude_regions
-        if len(excludes.strip()) > 0:
-            job_params["exclude_regions"] = f'--exclude-regions={excludes}'
-    except:
-        pass
+    # Add include and exclude regions
+    includes = p.include_regions
+    if len(includes.strip()) > 0:
+        job_params["include_regions"] = f'--include-regions={includes}'
+
+    excludes = p.exclude_regions
+    if len(excludes.strip()) > 0:
+        job_params["exclude_regions"] = f'--exclude-regions={excludes}'
 
     tags = ["data-subscriber-query-timer"]
     if processing_mode == 'historical':
