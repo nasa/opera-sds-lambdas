@@ -121,6 +121,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
 
 
 def form_job_params(p, disp_frame_map):
+    finished = False
     end_point = ENDPOINT
     download_job_queue = p.download_job_queue
     try:
@@ -165,7 +166,7 @@ def form_job_params(p, disp_frame_map):
         # If the last processed frame is the last in the series, it's time to go to the next k-time window
         if last_frame == max_frame:
             s_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
-            start_frame = 0
+            start_frame = 1
         else:
             start_frame = last_frame + 1
 
@@ -176,24 +177,34 @@ def form_job_params(p, disp_frame_map):
         frame_range = f'--frame-range={start_frame},{end_frame}'
 
         # For CSLC historical processing we increment the data by k*12 day
+        # If there isn't enough date to make K, we are done for this batch proc completely
         e_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
-
-        last_proc_date = s_date
-        last_proc_frame = end_frame
+        if e_date > data_end_date:
+            e_date = s_date = s_date - timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
+            last_proc_date = s_date
+            last_proc_frame = max_frame
+            finished = True
+        else:
+            last_proc_date = s_date
+            last_proc_frame = end_frame
 
     elif p.collection_short_name in HLS_SLC_COLLECTIONS:
 
+        # See if we've reached the end of this batch proc. If so, the rest of this function doesn't matter
+        if s_date >= data_end_date:
+            finished = True
+
         # End date time is when the start data time plus data increment time in minutes.
+        # If this is after the data end time, which would be the case
+        # when this is the very last iteration of this proc, change it to the data end time
         e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
+        if e_date > data_end_date:
+            e_date = data_end_date
+
         last_proc_date = e_date
 
     else:
         raise RuntimeError("Unknown collection %s ." % p.collection_short_name)
-
-    # If this is after the data end time, which would be the case when this is the very last iteration of this proc,
-    # change it to the data end time.
-    if e_date > data_end_date:
-        e_date = data_end_date
 
     job_spec = "job-%s:%s" % (p.job_type, JOB_RELEASE)
     job_params = {
@@ -234,7 +245,7 @@ def form_job_params(p, disp_frame_map):
     job_name = "data-subscriber-query-timer-{}_{}-{}".format(p.label, s_date.strftime(ES_DATETIME_FORMAT),
                                                              e_date.strftime(ES_DATETIME_FORMAT))
 
-    return job_name, job_spec, job_params, tags, last_proc_date, last_proc_frame
+    return job_name, job_spec, job_params, tags, last_proc_date, last_proc_frame, finished
 
 def batch_proc_once(disp_frame_map):
     procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
@@ -262,8 +273,12 @@ def batch_proc_once(disp_frame_map):
                                      "last_run_date": now.strftime(ES_DATETIME_FORMAT), }},
                            index=ES_INDEX)
 
+        # Compute job parameters
+        job_name, job_spec, job_params, job_tags, last_proc_date, last_proc_frame, finished = \
+            form_job_params(p, disp_frame_map)
+
         # See if we've reached the end of this batch proc. If so, disable it.
-        if s_date >= data_end_date:
+        if finished:
             print(p.label, "Batch Proc completed processing. It is now disabled")
             eu.update_document(id=doc_id,
                                body={"doc_as_upsert": True,
@@ -271,10 +286,6 @@ def batch_proc_once(disp_frame_map):
                                          "enabled": False, }},
                                index=ES_INDEX)
             continue
-
-        # Compute job parameters
-        job_name, job_spec, job_params, job_tags, last_proc_date, last_proc_frame = \
-            form_job_params(p, disp_frame_map)
 
         # update last_attempted_proc_data_date here
         eu.update_document(id=doc_id,
@@ -294,7 +305,7 @@ def batch_proc_once(disp_frame_map):
         # submit mozart job
         print("Submitting query job for", p.label,
               "with start date", job_params["start_datetime"].split("=")[1],
-              "and end date", last_proc_date)
+              "and end date", job_params["end_datetime"].split("=")[1])
         if (last_proc_frame is not None):
             print("Last proc frame", last_proc_frame)
         job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
