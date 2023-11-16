@@ -143,18 +143,32 @@ def form_job_params(p, disp_frame_map):
     data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
     data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
     frame_range = ""
+    last_proc_date = None
+    last_proc_frame = None
+
+    # Start date time is when the last successful process data time.
+    # If this is before the data start time, which may be the case when this batch_proc is first run,
+    # change it to the data start time.
+    s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
+    if s_date < data_start_date:
+        s_date = data_start_date
 
     # For CSLC input data, which is for DISP-S1 production, we need to do perform more logic
     # Frame numbers are 1-based and inclusive on both ends of the range
     if p.collection_short_name in CSLC_COLLECTIONS:
-        #TODO: Still need to work on this logic. Move on to the next date range only if we are end of frames
+        max_frame = len(disp_frame_map)
         try:
             last_frame = p.last_successful_proc_frame
         except Exception:
             last_frame = 0
 
-        max_frame = len(disp_frame_map)
-        start_frame = last_frame + 1
+        # If the last processed frame is the last in the series, it's time to go to the next k-time window
+        if last_frame == max_frame:
+            s_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
+            start_frame = 0
+        else:
+            start_frame = last_frame + 1
+
         end_frame = start_frame + p.frames_per_query - 1
         if end_frame > max_frame:
             end_frame = max_frame
@@ -164,16 +178,14 @@ def form_job_params(p, disp_frame_map):
         # For CSLC historical processing we increment the data by k*12 day
         e_date = s_date + timedelta(days=p.k * CSLC_DAYS_PER_COLLECTION_CYCLE)
 
+        last_proc_date = s_date
+        last_proc_frame = end_frame
+
     elif p.collection_short_name in HLS_SLC_COLLECTIONS:
-        # Start date time is when the last successful process data time.
-        # If this is before the data start time, which may be the case when this batch_proc is first run,
-        # change it to the data start time.
-        s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
-        if s_date < data_start_date:
-            s_date = data_start_date
 
         # End date time is when the start data time plus data increment time in minutes.
         e_date = s_date + timedelta(minutes=p.data_date_incr_mins)
+        last_proc_date = e_date
 
     else:
         raise RuntimeError("Unknown collection %s ." % p.collection_short_name)
@@ -222,7 +234,7 @@ def form_job_params(p, disp_frame_map):
     job_name = "data-subscriber-query-timer-{}_{}-{}".format(p.label, s_date.strftime(ES_DATETIME_FORMAT),
                                                              e_date.strftime(ES_DATETIME_FORMAT))
 
-    return job_name, job_spec, job_params, tags
+    return job_name, job_spec, job_params, tags, last_proc_date, last_proc_frame
 
 def batch_proc_once(disp_frame_map):
     procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
@@ -261,18 +273,18 @@ def batch_proc_once(disp_frame_map):
             continue
 
         # Compute job parameters
-        (job_name, job_spec, job_params, job_tags) = form_job_params(p, disp_frame_map)
+        job_name, job_spec, job_params, job_tags, last_proc_date, last_proc_frame = \
+            form_job_params(p, disp_frame_map)
 
         # update last_attempted_proc_data_date here
         eu.update_document(id=doc_id,
                            body={"doc_as_upsert": True,
                                  "doc": {
-                                     "last_attempted_proc_data_date": e_date, }},
+                                     "last_attempted_proc_data_date": last_proc_date, }},
                            index=ES_INDEX)
 
         # If we are processing CSLC we need to update proc_frame info
         if "frame_range" in job_params:
-            last_proc_frame = int(job_params["frame_range"].split(",")[1])
             eu.update_document(id=doc_id,
                                body={"doc_as_upsert": True,
                                      "doc": {
@@ -280,14 +292,18 @@ def batch_proc_once(disp_frame_map):
                                index=ES_INDEX)
 
         # submit mozart job
-        print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
+        print("Submitting query job for", p.label,
+              "with start date", job_params["start_datetime"].split("=")[1],
+              "and end date", last_proc_date)
+        if (last_proc_frame is not None):
+            print("Last proc frame", last_proc_frame)
         job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
 
         # Update last_successful_proc_data_date here
         eu.update_document(id=doc_id,
                            body={"doc_as_upsert": True,
                                  "doc": {
-                                     "last_successful_proc_data_date": e_date, }},
+                                     "last_successful_proc_data_date": last_proc_date, }},
                            index=ES_INDEX)
 
         # If we are processing CSLC we need to update proc_frame info. last_proc_frame was defined earlier
