@@ -133,13 +133,9 @@ def form_job_params(p, disp_frame_map):
         print("Temporal parameter not found in batch proc. Defaulting to false.")
         temporal = False
 
-    try:
-        processing_mode = p.processing_mode
-        if p.processing_mode == "historical":
-            temporal = True  # temporal is always true for historical processing
-    except:
-        print("processing_mode parameter not found in batch proc. Defaulting to forward.")
-        processing_mode = 'forward'
+    processing_mode = p.processing_mode
+    if p.processing_mode == "historical":
+        temporal = True  # temporal is always true for historical processing
 
     data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT)
     data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT)
@@ -223,19 +219,14 @@ def form_job_params(p, disp_frame_map):
         "use_temporal": f'--use-temporal' if temporal is True else ''
     }
 
-    # Include and exclude regions are optional
-    try:
-        includes = p.include_regions
-        if len(includes.strip()) > 0:
-            job_params["include_regions"] = f'--include-regions={includes}'
-    except:
-        pass
-    try:
-        excludes = p.exclude_regions
-        if len(excludes.strip()) > 0:
-            job_params["exclude_regions"] = f'--exclude-regions={excludes}'
-    except:
-        pass
+    # Add include and exclude regions
+    includes = p.include_regions
+    if len(includes.strip()) > 0:
+        job_params["include_regions"] = f'--include-regions={includes}'
+
+    excludes = p.exclude_regions
+    if len(excludes.strip()) > 0:
+        job_params["exclude_regions"] = f'--exclude-regions={excludes}'
 
     tags = ["data-subscriber-query-timer"]
     if processing_mode == 'historical':
