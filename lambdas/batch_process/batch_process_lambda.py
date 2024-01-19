@@ -336,14 +336,17 @@ def lambda_handler(event: Dict, context: LambdaContext):
     # we should retrieve and process this file every time. Processing takes less than one second.
     # /tmp has 512mb of storage and this json is around 30mb
     path = "/tmp/"+DISP_FRAME_BURST_MAP_JSON
+    print("Processing disp frame burst map json file from s3 %s to %s" % (ANC_BUCKET, path))
     s3 = boto3.resource('s3')
     try:
         s3.Object(ANC_BUCKET, DISP_FRAME_BURST_MAP_JSON).download_file(path)
     except Exception as e:
         raise Exception("Exception while fetching disp frame map json file: %s. " % DISP_FRAME_BURST_MAP_JSON + str(e))
+    print("Parsing disp frame burst map json file")
     disp_frame_map, metadata, version = process_disp_frame_burst_json(path)
 
     # submit mozart job
+    print("Running batch proc")
     return batch_proc_once(disp_frame_map)
 
 
