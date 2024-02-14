@@ -228,6 +228,10 @@ def form_job_params(p, disp_frame_map):
     if len(excludes.strip()) > 0:
         job_params["exclude_regions"] = f'--exclude-regions={excludes}'
 
+    if p.collection_short_name in CSLC_COLLECTIONS:
+        job_params["k"] = f"--k={p.k}"
+        job_params["m"] = f"--m={p.m}"
+
     tags = ["data-subscriber-query-timer"]
     if processing_mode == 'historical':
         tags.append("historical_processing")

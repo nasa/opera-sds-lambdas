@@ -27,6 +27,8 @@ def generate_p():
     p.data_start_date = START_DATE[:-1]
     p.data_end_date = END_DATE[:-1]
     p.last_successful_proc_data_date = '2000-01-01T00:00:00'
+    p.k = 2
+    p.m = 4
 
     return p
 def generate_p_slc():
@@ -105,6 +107,8 @@ def test_lambda_handler_disp():
     assert job_params["include_regions"] == f'--include-regions={INCLUDE_REGIONS}'
     assert job_params["exclude_regions"] == f'--exclude-regions={EXCLUDE_REGIONS}'
     assert job_params["frame_range"] == f'--frame-range=1,100'
+    assert job_params["k"] == f'--k=2'
+    assert job_params["m"] == f'--m=4'
     assert last_proc_frame == 100
     assert last_proc_date == batch_lambda.convert_datetime(START_DATE)
     assert finished == False
