@@ -105,6 +105,9 @@ def _create_job(event: Dict):
     except Exception:
         pass
 
+    # Get OS environment variable COVERAGE_NUM if it exists
+    coverage_num = os.environ.get("COVERAGE_NUM")
+    logger.info(f"Using COVERAGE_NUM={coverage_num}")
 
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime - relativedelta(minutes=int(minutes))
@@ -129,6 +132,7 @@ def _create_job(event: Dict):
         "m": f"--m={cslc_processing_m}" if cslc_processing_m else "",
         "grace_mins": f"--grace-mins={grace_mins}" if grace_mins else "",
         "coverage_percentage": f"--coverage-percentage={coverage_percentage}" if coverage_percentage else "",
+        "coverage_num": f"--coverage-num={coverage_num}" if coverage_num else "",
         "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
