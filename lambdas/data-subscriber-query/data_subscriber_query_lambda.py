@@ -78,6 +78,37 @@ def _create_job(event: Dict):
         logger.warning(
             "Exception while parsing REVISION_START_DATETIME_MARGIN_MINS. Using default value of 0. Ignore if this was intentional.")
 
+    # Get OS environment variable k and m if they exist
+    cslc_processing_k = None
+    cslc_processing_m = None
+    try:
+        cslc_processing_k = os.environ["CSLC_PROCESSING_K"]
+        logger.info(f"Using K={cslc_processing_k}")
+        cslc_processing_m = os.environ["CSLC_PROCESSING_M"]
+        logger.info(f"Using M={cslc_processing_m}")
+    except Exception:
+        pass
+
+    # Get OS environment variable GRACE_MINS if it exists
+    grace_mins = None
+    try:
+        grace_mins = os.environ["GRACE_MINS"]
+        logger.info(f"Using GRACE_MINS={grace_mins}")
+    except Exception:
+        pass
+
+    # Get OS environment variable COVERAGE_PERCENTAGE if it exists
+    coverage_percentage = None
+    try:
+        coverage_percentage = os.environ["COVERAGE_PERCENTAGE"]
+        logger.info(f"Using COVERAGE_PERCENTAGE={coverage_percentage}")
+    except Exception:
+        pass
+
+    # Get OS environment variable COVERAGE_NUM if it exists
+    coverage_num = os.environ.get("COVERAGE_NUM")
+    logger.info(f"Using COVERAGE_NUM={coverage_num}")
+
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime - relativedelta(minutes=int(minutes))
 
@@ -97,6 +128,11 @@ def _create_job(event: Dict):
         "download_job_queue": f'--job-queue={os.environ["DOWNLOAD_JOB_QUEUE"]}',
         "chunk_size": f'--chunk-size={os.environ["CHUNK_SIZE"]}',
         "max_revision": f'--max-revision={os.environ["MAX_REVISION"]}',
+        "k": f"--k={cslc_processing_k}" if cslc_processing_k else "",
+        "m": f"--m={cslc_processing_m}" if cslc_processing_m else "",
+        "grace_mins": f"--grace-mins={grace_mins}" if grace_mins else "",
+        "coverage_percentage": f"--coverage-percentage={coverage_percentage}" if coverage_percentage else "",
+        "coverage_num": f"--coverage-num={coverage_num}" if coverage_num else "",
         "smoke_run": f'{"--smoke-run" if strtobool(os.environ["SMOKE_RUN"]) else ""}',
         "dry_run": f'{"--dry-run" if strtobool(os.environ["DRY_RUN"]) else ""}',
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',

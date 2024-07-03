@@ -152,3 +152,32 @@ def test_create_job_revision_margin(monkeypatch):
     assert job_params['start_datetime'] == '--start-date='+'1969-12-31T22:00:00Z'
     assert job_params['end_datetime'] == '--end-date=' + '1969-12-31T23:00:00Z'
     assert job_params['max_revision'] == "--max-revision=3"
+
+def test_create_job_cslc_k_m(monkeypatch):
+    # ARRANGE
+    monkeypatch.setenv("USE_TEMPORAL", "false")
+    monkeypatch.setenv("CSLC_PROCESSING_K", "4")
+    monkeypatch.setenv("CSLC_PROCESSING_M", "2")
+
+    job_name, job_spec, job_params, queue, tags = data_subscriber_query._create_job(event)
+
+    assert job_params['k'] == '--k=4'
+    assert job_params['m'] == '--m=2'
+
+def test_create_job_cslc_grace_mins(monkeypatch):
+    # ARRANGE
+    monkeypatch.setenv("USE_TEMPORAL", "false")
+    monkeypatch.setenv("GRACE_MINS", "10")
+
+    job_name, job_spec, job_params, queue, tags = data_subscriber_query._create_job(event)
+
+    assert job_params['grace_mins'] == '--grace-mins=10'
+
+def test_create_job_cslc_coverage_percentage(monkeypatch):
+    # ARRANGE
+    monkeypatch.setenv("USE_TEMPORAL", "false")
+    monkeypatch.setenv("COVERAGE_PERCENTAGE", "90")
+
+    job_name, job_spec, job_params, queue, tags = data_subscriber_query._create_job(event)
+
+    assert job_params['coverage_percentage'] == '--coverage-percentage=90'
