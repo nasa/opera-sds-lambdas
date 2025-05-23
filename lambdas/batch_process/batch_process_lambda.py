@@ -241,7 +241,7 @@ def submit_tropo_jobs(p, s_date, e_date):
         Set[str]: Set of prefix strings in YYYYmmddTHH0000 format
     """
     s3 = boto3.resource("s3") 
-    bucket_name = p.bucket_name
+    bucket_name = p.s3_bucket_name
     bucket = s3.Bucket(bucket_name)
 
     prefixes = get_tropo_input_prefixes(s_date, e_date)

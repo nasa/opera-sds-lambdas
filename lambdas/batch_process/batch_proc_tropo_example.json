@@ -14,5 +14,6 @@
   "run_interval_mins": 8640,
   "job_type": "job-SCIFLO_L4_TROPO",
   "release": "3.0.0-er.2.0-tropo",
-  "job_queue": "opera-job_worker-sciflo-l4_tropo"
+  "job_queue": "opera-job_worker-sciflo-l4_tropo",
+  "s3_bucket_name": "opera-ecmwf"
   }
