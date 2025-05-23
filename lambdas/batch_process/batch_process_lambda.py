@@ -5,7 +5,10 @@ import re
 from distutils.util import strtobool
 from typing import Dict
 import dateutil.parser
+from pathlib import PurePath
 import requests
+
+import boto3
 
 from types import SimpleNamespace
 import time
@@ -152,6 +155,108 @@ def form_job_params(p, s_date, e_date):
 
     return job_name, job_spec, job_params, tags
 
+def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
+    # Create the full S3 path
+    s3_path = f"s3://{bucket_name}/{s3_key}"
+    
+    # Create the product structure with metadata
+    product_metadata = {
+        "dataset": f"L4_TROPO-{s3_key}",
+        "metadata": {
+            "batch_id": s3_key,
+            "product_paths": {"L4_TROPO": [s3_path]},  # The S3 paths to localize
+            "ProductReceivedTime": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "FileName": PurePath(s3_key).name,
+            "FileLocation": s3_path,
+            "id": s3_key,
+            "Files": [
+                {
+                    "FileName": PurePath(s3_key).name,
+                    "FileSize": 1,
+                    "FileLocation": s3_path,
+                    "id": PurePath(s3_key).name,
+                    "product_paths": "$.product_paths"
+                }
+            ]
+        }
+    }
+
+        # Create the job parameters
+    params = [
+        {
+            "name": "dataset_type",
+            "from": "value",
+            "type": "text",
+            "value": "L4_TROPO"
+        },
+        {
+            "name": "input_dataset_id",
+            "from": "value",
+            "type": "text",
+            "value": s3_key
+        },
+        {
+            "name": "product_metadata",
+            "from": "value",
+            "type": "object",
+            "value": product_metadata
+        }
+    ]
+
+    job_name = f"tropo-historical-{p.label}_{s_date.strftime(ES_DATETIME_FORMAT)}-{e_date.strftime(ES_DATETIME_FORMAT)}"
+    job_spec = f"{p.job_type}:{p.release}"
+
+    return job_name, job_spec, params
+
+def get_tropo_input_prefixes(s_date, e_date):
+    prefixes = set()
+    current = s_date
+    # Find the first 6-hour chunk that current intersects with
+    if current.hour < 6:
+        current = current.replace(hour=0)
+    elif current.hour < 12:
+        current = current.replace(hour=6) 
+    elif current.hour < 18:
+        current = current.replace(hour=12)
+    else:
+        current = current.replace(hour=18)
+    current = current.replace(minute=0, second=0, microsecond=0)
+
+    # Generate all 6-hour chunks between start and end dates
+    # make sure the whole range ends before end time
+    while current + timedelta(hours=6) <= e_date:
+        prefixes.add(current.strftime("%Y%m%d%H0000"))
+        current += timedelta(hours=6)
+
+def submit_tropo_jobs(p, s_date, e_date): 
+    """
+    Generate a set of prefixes for all 6-hour chunks in the given range (inclusive).
+    Each day is split into 4 chunks: 00:00, 06:00, 12:00, and 18:00.
+    
+    Args:
+        start_datetime: Start datetime 
+        end_datetime: End datetime 
+        
+    Returns:
+        Set[str]: Set of prefix strings in YYYYmmddTHH0000 format
+    """
+    s3 = boto3.resource("s3") 
+    bucket_name = p.bucket_name
+    bucket = s3.Bucket(bucket_name)
+
+    prefixes = get_tropo_input_prefixes(s_date, e_date)
+
+    # Form parameters for each job and submit them
+    job_success = []
+    for prefix in prefixes:
+        for obj in bucket.objects.filter(Prefix=prefix):
+            job_name, job_spec, job_params = form_tropo_job_params(p, obj.key, bucket_name, s_date, e_date)
+            job_success.append(submit_job(job_name, job_spec, job_params, p.job_queue))
+
+    # Return True if all jobs were successful, False otherwise
+    return all(job_success)
+
+
 def batch_proc_once():
     procs = eu.query(index=ES_INDEX)  # TODO: query for only enabled docs
     for proc in procs:
@@ -212,14 +317,17 @@ def batch_proc_once():
                                      "last_attempted_proc_data_date": e_date, }},
                            index=ES_INDEX)
 
-
-        # Compute job parameters
-        (job_name, job_spec, job_params, job_tags) = form_job_params(p, s_date, e_date)
-        #return job_params
-
-        # submit mozart job
-        print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
-        job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
+        # tropo batch jobs
+        if p.job_type == "job-SCIFLO_L4_TROPO":
+            # Compute job parameters and submit job for tropo
+            job_success = submit_tropo_jobs(p, s_date, e_date)
+        # Non-tropo batch jobs
+        else:
+            # Compute job parameters
+            (job_name, job_spec, job_params, job_tags) = form_job_params(p, s_date, e_date)
+            # submit mozart job
+            print("Submitting query job for", p.label, "with start date", s_date, "and end date", e_date)
+            job_success = submit_job(job_name, job_spec, job_params, p.job_queue, job_tags)
 
         # Update last_successful_proc_data_date here
         eu.update_document(id=doc_id,

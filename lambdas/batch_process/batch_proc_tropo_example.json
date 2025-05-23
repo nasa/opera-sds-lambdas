@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "label": "TROPO HISTORICAL",
+  "processing_mode": "historical",
+  "include_regions": "",
+  "exclude_regions": "",
+  "temporal": true,
+  "data_start_date": "2015-01-01T00:00:00",
+  "data_end_date": "2025-06-01T00:00:00",
+  "last_attempted_proc_data_date": "1900-01-00T01:00:00",
+  "last_successful_proc_data_date": "1900-01-01T01:00:00",
+  "last_run_date": "1900-01-01T12:57:01",
+  "data_date_incr_mins": 86400,
+  "run_interval_mins": 8640,
+  "job_type": "job-SCIFLO_L4_TROPO",
+  "release": "3.0.0-er.2.0-tropo",
+  "job_queue": "opera-job_worker-sciflo-l4_tropo"
+  }
