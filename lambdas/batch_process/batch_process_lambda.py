@@ -181,29 +181,14 @@ def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
         }
     }
 
-        # Create the job parameters
-    params = [
-        {
-            "name": "dataset_type",
-            "from": "value",
-            "type": "text",
-            "value": "L4_TROPO"
-        },
-        {
-            "name": "input_dataset_id",
-            "from": "value",
-            "type": "text",
-            "value": s3_key
-        },
-        {
-            "name": "product_metadata",
-            "from": "value",
-            "type": "object",
-            "value": product_metadata
-        }
-    ]
+    # Create the job parameters
+    params = {
+        "dataset_type": "L4_TROPO",
+        "input_dataset_id": s3_key,
+        "product_metadata": product_metadata
+    }
 
-    job_name = f"tropo-historical-{p.label}_{s_date.strftime(ES_DATETIME_FORMAT)}-{e_date.strftime(ES_DATETIME_FORMAT)}"
+    job_name = f"l4-tropo-{p.label}_{s_date.strftime(ES_DATETIME_FORMAT)}-{e_date.strftime(ES_DATETIME_FORMAT)}"
     job_spec = f"{p.job_type}:{JOB_RELEASE}"
 
     return job_name, job_spec, params
@@ -225,9 +210,10 @@ def get_tropo_input_prefixes(s_date, e_date):
     # Generate all 6-hour chunks between start and end dates
     # make sure the whole range ends before end time
     while current + timedelta(hours=6) <= e_date:
-        prefixes.add(current.strftime("%Y%m%d%H0000"))
+        prefixes.add(f'{current.strftime("%Y%m%d")}/ECMWF_TROP_{current.strftime("%Y%m%d%H00")}')
         current += timedelta(hours=6)
     
+    print(prefixes)
     return prefixes
 
 def submit_tropo_jobs(p, s_date, e_date): 
@@ -253,7 +239,7 @@ def submit_tropo_jobs(p, s_date, e_date):
     for prefix in prefixes:
         for obj in bucket.objects.filter(Prefix=prefix):
             job_name, job_spec, job_params = form_tropo_job_params(p, obj.key, bucket_name, s_date, e_date)
-            job_success.append(submit_job(job_name, job_spec, job_params, p.job_queue))
+            job_success.append(submit_job(job_name, job_spec, job_params, p.job_queue, {}))
 
     # Return True if all jobs were successful, False otherwise
     return all(job_success)
