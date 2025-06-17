@@ -204,7 +204,7 @@ def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
     ]
 
     job_name = f"tropo-historical-{p.label}_{s_date.strftime(ES_DATETIME_FORMAT)}-{e_date.strftime(ES_DATETIME_FORMAT)}"
-    job_spec = f"{p.job_type}:{p.release}"
+    job_spec = f"{p.job_type}:{JOB_RELEASE}"
 
     return job_name, job_spec, params
 
@@ -227,6 +227,8 @@ def get_tropo_input_prefixes(s_date, e_date):
     while current + timedelta(hours=6) <= e_date:
         prefixes.add(current.strftime("%Y%m%d%H0000"))
         current += timedelta(hours=6)
+    
+    return prefixes
 
 def submit_tropo_jobs(p, s_date, e_date): 
     """
