@@ -188,7 +188,8 @@ def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
         "product_metadata": product_metadata
     }
 
-    job_name = f"l4-tropo-{p.label}_{s_date.strftime(ES_DATETIME_FORMAT)}-{e_date.strftime(ES_DATETIME_FORMAT)}"
+    p.label = p.label.replace(" ", "_")
+    job_name = "job-WF-SCIFLO_L4-TROPO-{}-{}".format(p.label, PurePath(s3_key).name)
     job_spec = f"{p.job_type}:{JOB_RELEASE}"
 
     return job_name, job_spec, params
