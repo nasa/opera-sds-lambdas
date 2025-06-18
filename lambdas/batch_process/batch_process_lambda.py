@@ -192,7 +192,13 @@ def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
     job_name = "job-WF-SCIFLO_L4-TROPO-{}-{}".format(p.label, PurePath(s3_key).name)
     job_spec = f"{p.job_type}:{JOB_RELEASE}"
 
-    return job_name, job_spec, params
+    tags = ["l4-tropo-batch-timer"]
+    if p.processing_mode == 'historical':
+        tags.append("historical_processing")
+    else:
+        tags.append("batch_processing")
+        
+    return job_name, job_spec, params, tags
 
 def get_tropo_input_prefixes(s_date, e_date):
     prefixes = set()
@@ -239,8 +245,8 @@ def submit_tropo_jobs(p, s_date, e_date):
     job_success = []
     for prefix in prefixes:
         for obj in bucket.objects.filter(Prefix=prefix):
-            job_name, job_spec, job_params = form_tropo_job_params(p, obj.key, bucket_name, s_date, e_date)
-            job_success.append(submit_job(job_name, job_spec, job_params, p.job_queue, {}))
+            job_name, job_spec, job_params, tags = form_tropo_job_params(p, obj.key, bucket_name, s_date, e_date)
+            job_success.append(submit_job(job_name, job_spec, job_params, p.job_queue, tags))
 
     # Return True if all jobs were successful, False otherwise
     return all(job_success)
