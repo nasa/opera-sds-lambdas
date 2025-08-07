@@ -138,7 +138,8 @@ def _create_job(event: Dict):
         "no_schedule_download": f'{"--no-schedule-download" if strtobool(os.environ["NO_SCHEDULE_DOWNLOAD"]) else ""}',
         "use_temporal": f'{"--use-temporal" if strtobool(os.environ["USE_TEMPORAL"]) else ""}',
         "temporal_start_datetime": f'--temporal-start-date={temporal_start_datetime}' if temporal_start_datetime else "",
-        "bounding_box": f'--bounds={bounding_box}' if bounding_box else ""
+        "bounding_box": f'--bounds={bounding_box}' if bounding_box else "",
+        "provider": f'--provider={os.environ["PROVIDER"]}'
     }
 
     tags = ["data-subscriber-query-timer"]
