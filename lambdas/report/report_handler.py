@@ -1,10 +1,8 @@
-from __future__ import print_function
-
 import os
 import json
 import requests
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
@@ -83,7 +81,7 @@ def lambda_handler(event, context):
     if end_time:
         end_time = convert_datetime(end_time)
     else:
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         # This ensures we generate reports with consistent time ranges.
         end_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
 

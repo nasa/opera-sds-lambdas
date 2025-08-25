@@ -1,8 +1,6 @@
-from __future__ import print_function
-
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -75,7 +73,7 @@ def lambda_handler(event, context):
     print("Got context: %s" % context)
     print("os.environ: %s" % os.environ)
 
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     job_type = os.environ['JOB_TYPE']
     job_release = os.environ['JOB_RELEASE']

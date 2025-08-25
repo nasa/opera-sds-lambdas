@@ -1,4 +1,3 @@
-from __future__ import print_function
 import json
 import os
 import re
@@ -12,7 +11,7 @@ import boto3
 
 from types import SimpleNamespace
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta, timezone
 from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from hysds_commons.elasticsearch_utils import ElasticsearchUtility
@@ -165,7 +164,7 @@ def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
         "metadata": {
             "batch_id": s3_key,
             "product_paths": {"L4_TROPO": [s3_path]},  # The S3 paths to localize
-            "ProductReceivedTime": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "ProductReceivedTime": datetime.now(timezone.utc).isoformat().replace(tzinfo=None),
             "FileName": PurePath(s3_key).name,
             "FileLocation": s3_path,
             "id": s3_key,
@@ -263,7 +262,7 @@ def batch_proc_once():
         if p.enabled == False:
             continue
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         new_last_run_date = datetime.strptime(p.last_run_date, ES_DATETIME_FORMAT) + timedelta(
             minutes=p.run_interval_mins)
 
