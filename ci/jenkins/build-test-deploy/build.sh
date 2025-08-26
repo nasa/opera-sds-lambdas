@@ -18,10 +18,8 @@ echo "GIT_OAUTH_TOKEN: $GIT_OAUTH_TOKEN"
 TAG=$BRANCH
 echo "TAG: $TAG"
 
-# set env vars for python3.12 and activate
-export PATH=/home/hysdsops/miniforge3/bin:$PATH
+# activate python3.12 venv
 source /home/hysdsops/verdi-py3.12/bin/activate
-which python
 
 rm -rf ${WORKSPACE}/lambda_packages
 
