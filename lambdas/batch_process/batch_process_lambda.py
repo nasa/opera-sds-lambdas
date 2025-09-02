@@ -3,7 +3,6 @@ import os
 import re
 from distutils.util import strtobool
 from typing import Dict
-import dateutil.parser
 from pathlib import PurePath
 import requests
 
@@ -11,7 +10,8 @@ import boto3
 
 from types import SimpleNamespace
 import time
-from datetime import datetime, timezone, timedelta, timezone
+from datetime import datetime, timezone, timedelta
+from datetime_utils import parse_strptime_datetime
 from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from hysds_commons.elasticsearch_utils import ElasticsearchUtility
@@ -53,7 +53,7 @@ def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
     if isinstance(datetime_obj, datetime):
         return datetime_obj.strftime(strformat)
-    return datetime.strptime(str(datetime_obj), strformat).replace(tzinfo=timezone.utc)
+    return parse_strptime_datetime(str(datetime_obj), strformat)
 
 
 def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
@@ -263,7 +263,7 @@ def batch_proc_once():
             continue
 
         now = datetime.now(timezone.utc)
-        new_last_run_date = datetime.strptime(p.last_run_date, ES_DATETIME_FORMAT).replace(tzinfo=timezone.utc) + timedelta(
+        new_last_run_date = parse_strptime_datetime(p.last_run_date, ES_DATETIME_FORMAT) + timedelta(
             minutes=p.run_interval_mins)
 
         # If it's not time to run yet, just continue
@@ -277,13 +277,13 @@ def batch_proc_once():
                                      "last_run_date": now.strftime(ES_DATETIME_FORMAT), }},
                            index=ES_INDEX)
 
-        data_start_date = datetime.strptime(p.data_start_date, ES_DATETIME_FORMAT).replace(tzinfo=timezone.utc)
-        data_end_date = datetime.strptime(p.data_end_date, ES_DATETIME_FORMAT).replace(tzinfo=timezone.utc)
+        data_start_date = parse_strptime_datetime(p.data_start_date, ES_DATETIME_FORMAT)
+        data_end_date = parse_strptime_datetime(p.data_end_date, ES_DATETIME_FORMAT)
 
         # Start date time is when the last successful process data time.
         # If this is before the data start time, which may be the case when this batch_proc is first run,
         # change it to the data start time.
-        s_date = datetime.strptime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT).replace(tzinfo=timezone.utc)
+        s_date = parse_strptime_datetime(p.last_successful_proc_data_date, ES_DATETIME_FORMAT)
         if s_date < data_start_date:
             s_date = data_start_date
 

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from distutils.util import strtobool
 from typing import Dict
 
-import dateutil.parser
+from datetime_utils import parse_iso_datetime
 import requests
 from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -65,7 +65,7 @@ def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
 def _create_job(event: Dict):
     event = EventBridgeEvent(event)
 
-    query_end_datetime = dateutil.parser.isoparse(event.time)
+    query_end_datetime = parse_iso_datetime(event.time)
 
     # Offset the revision start and stop time if specified
     try:

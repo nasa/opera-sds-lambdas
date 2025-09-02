@@ -3,6 +3,7 @@ import json
 import requests
 
 from datetime import datetime, timezone, timedelta
+from datetime_utils import parse_strptime_datetime
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
@@ -21,7 +22,7 @@ def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
     if isinstance(datetime_obj, datetime):
         return datetime_obj.strftime(strformat)
-    return datetime.strptime(str(datetime_obj), strformat).replace(tzinfo=timezone.utc)
+    return parse_strptime_datetime(str(datetime_obj), strformat)
 
 
 def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):

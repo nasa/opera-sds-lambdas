@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 from typing import Dict
 
-import dateutil.parser
+from datetime_utils import parse_iso_datetime
 import requests
 from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -64,7 +64,7 @@ def _create_job(event: Dict):
     #  Set offsets accordingly.
 
     query_end_datetime_offset_hours = int(os.environ["QUERY_END_DATETIME_OFFSET_HOURS"])
-    query_end_datetime = dateutil.parser.isoparse(event.time) - relativedelta(hours=query_end_datetime_offset_hours)
+    query_end_datetime = parse_iso_datetime(event.time) - relativedelta(hours=query_end_datetime_offset_hours)
 
     query_start_datetime_offset_hours = int(os.environ["QUERY_START_DATETIME_OFFSET_HOURS"])
     query_start_datetime = query_end_datetime - relativedelta(hours=query_start_datetime_offset_hours)
