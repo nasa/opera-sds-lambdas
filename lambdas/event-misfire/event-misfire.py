@@ -113,7 +113,7 @@ def lambda_handler(event, context):
             file_creation_time = s3_files[key]
             print("file_creation_time : {} of type : {}".format(file_creation_time, type(file_creation_time)))
             if type(file_creation_time) == str:
-                file_creation_time = datetime.strptime(file_creation_time, '%d%m%YT%H:%M:%S')
+                file_creation_time = datetime.strptime(file_creation_time, '%d%m%YT%H:%M:%S').replace(tzinfo=timezone.utc)
 
             difference = (now - file_creation_time).total_seconds()        
             print("File was created {} seconds ago".format(difference))

@@ -60,7 +60,7 @@ def test_get_temporal_start_datetime__when_USE_TEMPORAL_is_empty_string__and_no_
     monkeypatch.setenv("USE_TEMPORAL", "")
 
     # ACT
-    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc))
 
     # ASSERT
     assert temporal_start_datetime == ""
@@ -71,7 +71,7 @@ def test_get_temporal_start_datetime__when_USE_TEMPORAL_is_false__and_no_tempora
     monkeypatch.setenv("USE_TEMPORAL", "false")
 
     # ACT
-    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc))
 
     # ASSERT
     assert temporal_start_datetime == ""
@@ -82,7 +82,7 @@ def test_get_temporal_start_datetime__when_USE_TEMPORAL_is_true__but_no_temporal
     monkeypatch.setenv("USE_TEMPORAL", "true")
 
     # ACT
-    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc))
 
     # ASSERT
     assert temporal_start_datetime == ""
@@ -94,7 +94,7 @@ def test_get_temporal_start_datetime__when_margin_given__then_returns_updated_da
     monkeypatch.setenv("TEMPORAL_START_DATETIME_MARGIN_DAYS", 3)
 
     # ACT
-    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc))
 
     # ASSERT
     assert temporal_start_datetime == "2022-12-29T00:00:00Z"
@@ -106,7 +106,7 @@ def test_get_temporal_start_datetime__when_datetime_given__then_returns_updated_
     monkeypatch.setenv("TEMPORAL_START_DATETIME", "2022-12-29T00:00:00Z")
 
     # ACT
-    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc))
 
     # ASSERT
     assert temporal_start_datetime == "2022-12-29T00:00:00Z"
@@ -119,7 +119,7 @@ def test_get_temporal_start_datetime__when_both_margin_and_datetime_are_given__t
     monkeypatch.setenv("TEMPORAL_START_DATETIME", "1970-01-01T00:00:00Z")
 
     # ACT
-    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"))
+    temporal_start_datetime = data_subscriber_query.get_temporal_start_datetime(datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc))
 
     # ASSERT
     assert temporal_start_datetime == "2022-12-29T00:00:00Z"

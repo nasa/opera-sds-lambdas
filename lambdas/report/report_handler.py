@@ -21,7 +21,7 @@ def convert_datetime(datetime_obj, strformat=DATETIME_FORMAT):
     """
     if isinstance(datetime_obj, datetime):
         return datetime_obj.strftime(strformat)
-    return datetime.strptime(str(datetime_obj), strformat)
+    return datetime.strptime(str(datetime_obj), strformat).replace(tzinfo=timezone.utc)
 
 
 def submit_job(job_name, job_spec, job_params, queue, tags, priority=0):
