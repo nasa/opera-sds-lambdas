@@ -36,6 +36,11 @@ pushd ${WORKSPACE}/lambdas/isl-sns
 python setup.py package --version ${TAG} --workspace workspace --lambda-func isl-sns.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 pushd ${WORKSPACE}/lambdas/event-misfire
+# Copy datetime_utils.py if it's a symlink (resolve it for packaging)
+if [ -L datetime_utils.py ]; then
+    cp -L datetime_utils.py datetime_utils.py.tmp
+    mv datetime_utils.py.tmp datetime_utils.py
+fi
 python setup.py package --version ${TAG} --workspace workspace --lambda-func event-misfire.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
@@ -44,21 +49,46 @@ python setup.py package --version ${TAG} --workspace workspace --lambda-func tim
 popd
 
 pushd ${WORKSPACE}/lambdas/report
+# Copy datetime_utils.py if it's a symlink (resolve it for packaging)
+if [ -L datetime_utils.py ]; then
+    cp -L datetime_utils.py datetime_utils.py.tmp
+    mv datetime_utils.py.tmp datetime_utils.py
+fi
 python setup.py package --version ${TAG} --workspace workspace --lambda-func report_handler.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
 pushd ${WORKSPACE}/lambdas/data-subscriber-download
+# Copy datetime_utils.py if it's a symlink (resolve it for packaging)
+if [ -L datetime_utils.py ]; then
+    cp -L datetime_utils.py datetime_utils.py.tmp
+    mv datetime_utils.py.tmp datetime_utils.py
+fi
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_download_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
 pushd ${WORKSPACE}/lambdas/data-subscriber-download-slc-ionosphere
+# Copy datetime_utils.py if it's a symlink (resolve it for packaging)
+if [ -L datetime_utils.py ]; then
+    cp -L datetime_utils.py datetime_utils.py.tmp
+    mv datetime_utils.py.tmp datetime_utils.py
+fi
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_download_slc_ionosphere_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
 pushd ${WORKSPACE}/lambdas/data-subscriber-query
+# Copy datetime_utils.py if it's a symlink (resolve it for packaging)
+if [ -L datetime_utils.py ]; then
+    cp -L datetime_utils.py datetime_utils.py.tmp
+    mv datetime_utils.py.tmp datetime_utils.py
+fi
 python setup.py package --version ${TAG} --workspace workspace --lambda-func data_subscriber_query_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
 pushd ${WORKSPACE}/lambdas/batch_process
+# Copy datetime_utils.py if it's a symlink (resolve it for packaging)
+if [ -L datetime_utils.py ]; then
+    cp -L datetime_utils.py datetime_utils.py.tmp
+    mv datetime_utils.py.tmp datetime_utils.py
+fi
 python setup.py package --version ${TAG} --workspace workspace --lambda-func batch_process_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
