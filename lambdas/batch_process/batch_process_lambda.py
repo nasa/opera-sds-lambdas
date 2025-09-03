@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from distutils.util import strtobool
+
 from typing import Dict
 from pathlib import PurePath
 import requests
