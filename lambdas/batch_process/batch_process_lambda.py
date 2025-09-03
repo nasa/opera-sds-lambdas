@@ -42,7 +42,7 @@ JOB_SUBMIT_URL = "%s/api/v0.1/job/submit?enable_dedup=false" % MOZART_URL
 ES_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 ES_INDEX = 'batch_proc'
 LOGGER = logging.getLogger(ES_INDEX)
-eu = ElasticsearchUtility('http://%s:%s' % (GRQ_IP, str(GRQ_ES_PORT)), LOGGER)
+eu = ElasticsearchUtility('http://%s:%s' % (GRQ_IP, str(GRQ_ES_PORT)), logger=LOGGER)
 
 print("Loading Lambda function")
 
