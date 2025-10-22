@@ -164,7 +164,7 @@ def form_tropo_job_params(p, s3_key, bucket_name, s_date, e_date):
         "metadata": {
             "batch_id": s3_key,
             "product_paths": {"L4_TROPO": [s3_path]},  # The S3 paths to localize
-            "ProductReceivedTime": datetime.now(timezone.utc).isoformat().replace(tzinfo=None),
+            "ProductReceivedTime": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "FileName": PurePath(s3_key).name,
             "FileLocation": s3_path,
             "id": s3_key,
