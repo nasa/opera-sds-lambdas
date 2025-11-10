@@ -109,6 +109,14 @@ def _create_job(event: Dict):
     coverage_num = os.environ.get("COVERAGE_NUM")
     logger.info(f"Using COVERAGE_NUM={coverage_num}")
 
+    # Get OS environment variable K_OFFSETS_COUNTS if it exists
+    k_offsets_counts = None
+    try: 
+        k_offsets_counts = os.environ.get("K_OFFSETS_COUNTS")
+        logger.info(f"Using K_OFFSETS_COUNTS={k_offsets_counts}")
+    except Exception:
+        pass
+
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime - relativedelta(minutes=int(minutes))
 
