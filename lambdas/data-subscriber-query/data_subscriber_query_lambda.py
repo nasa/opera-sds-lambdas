@@ -109,6 +109,14 @@ def _create_job(event: Dict):
     coverage_num = os.environ.get("COVERAGE_NUM")
     logger.info(f"Using COVERAGE_NUM={coverage_num}")
 
+    # Get OS environment variable K_OFFSETS_COUNTS if it exists
+    k_offsets_counts = None
+    try: 
+        k_offsets_counts = os.environ.get("K_OFFSETS_COUNTS")
+        logger.info(f"Using K_OFFSETS_COUNTS={k_offsets_counts}")
+    except Exception:
+        pass
+
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime - relativedelta(minutes=int(minutes))
 
@@ -130,6 +138,7 @@ def _create_job(event: Dict):
         "max_revision": f'--max-revision={os.environ["MAX_REVISION"]}',
         "k": f"--k={cslc_processing_k}" if cslc_processing_k else "",
         "m": f"--m={cslc_processing_m}" if cslc_processing_m else "",
+        "k_offsets_counts": f"--k-offsets-counts="{k_offsets_counts}" if k_offsets_counts else "",
         "grace_mins": f"--grace-mins={grace_mins}" if grace_mins else "",
         "coverage_percentage": f"--coverage-percentage={coverage_percentage}" if coverage_percentage else "",
         "coverage_num": f"--coverage-num={coverage_num}" if coverage_num else "",
