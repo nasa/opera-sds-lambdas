@@ -1,6 +1,6 @@
 
 import os, sys, re, json, requests, boto3, base64
-from datetime import datetime
+from datetime import datetime, UTC
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -243,7 +243,7 @@ def lambda_handler(event, context):
             "restaged": True if file_type == metreq else False,
             "SQS_record": event["Records"][0],
             "S3_event_record": message["Records"][0],
-            "Lambda_trigger_time": datetime.utcnow().strftime(DATETIME_FORMAT),
+            "Lambda_trigger_time": datetime.now(UTC).strftime(DATETIME_FORMAT),
         }
         print("Metadata created: {}".format(json.dumps(md, indent=2)))
 

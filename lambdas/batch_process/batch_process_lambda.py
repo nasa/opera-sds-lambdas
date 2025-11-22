@@ -26,7 +26,7 @@ import boto3
 
 from types import SimpleNamespace
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, UTC
 from aws_lambda_powertools.utilities.data_classes import EventBridgeEvent
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from hysds_commons.elasticsearch_utils import ElasticsearchUtility
@@ -277,7 +277,7 @@ def batch_proc_once():
         if p.enabled == False:
             continue
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         new_last_run_date = datetime.strptime(p.last_run_date, ES_DATETIME_FORMAT) + timedelta(
             minutes=p.run_interval_mins)
 

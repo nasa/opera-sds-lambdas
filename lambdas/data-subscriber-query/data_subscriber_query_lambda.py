@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict
 
 
@@ -165,7 +165,7 @@ def _create_job(event: Dict):
     }
 
     tags = ["data-subscriber-query-timer"]
-    job_name = f"data-subscriber-query-timer-{datetime.utcnow().strftime(JOB_NAME_DATETIME_FORMAT)}_{minutes}"
+    job_name = f"data-subscriber-query-timer-{datetime.now(UTC).strftime(JOB_NAME_DATETIME_FORMAT)}_{minutes}"
 
     return job_name, job_spec, job_params, queue, tags
 

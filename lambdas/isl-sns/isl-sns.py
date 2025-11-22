@@ -1,6 +1,6 @@
 
 import os, sys, re, json, requests, boto3
-from datetime import datetime
+from datetime import datetime, UTC
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -117,7 +117,7 @@ def lambda_handler(event, context):
         "ISL_urls": [ds_url],
         "SNS_record": event["Records"][0],
         "S3_event_record": message['Records'][0],
-        "Lambda_trigger_time": datetime.utcnow().strftime(DATETIME_FORMAT)
+        "Lambda_trigger_time": datetime.now(UTC).strftime(DATETIME_FORMAT)
     }
     print("Metadata created: {}".format(json.dumps(md, indent=2)))
     # data file
