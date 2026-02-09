@@ -71,51 +71,21 @@ def _create_job(event: Dict):
 
     # Offset the revision start and stop time if specified
     try:
-        revision_offset_mins = os.environ["REVISION_START_DATETIME_MARGIN_MINS"]
+        revision_offset_mins = get_env_var("REVISION_START_DATETIME_MARGIN_MINS")
         query_end_datetime = query_end_datetime - relativedelta(minutes=int(revision_offset_mins))
-        logger.info(f"Using REVISION_START_DATETIME_MARGIN_MINS={revision_offset_mins}")
     except Exception:
         logger.warning(
             "Exception while parsing REVISION_START_DATETIME_MARGIN_MINS. Using default value of 0. Ignore if this was intentional.")
 
-    # Get OS environment variable k and m if they exist
-    cslc_processing_k = None
-    cslc_processing_m = None
-    try:
-        cslc_processing_k = os.environ["CSLC_PROCESSING_K"]
-        logger.info(f"Using K={cslc_processing_k}")
-        cslc_processing_m = os.environ["CSLC_PROCESSING_M"]
-        logger.info(f"Using M={cslc_processing_m}")
-    except Exception:
-        pass
+    cslc_processing_k = get_env_var("CSLC_PROCESSING_K")
+    cslc_processing_m = get_env_var("CSLC_PROCESSING_M")
 
-    # Get OS environment variable GRACE_MINS if it exists
-    grace_mins = None
-    try:
-        grace_mins = os.environ["GRACE_MINS"]
-        logger.info(f"Using GRACE_MINS={grace_mins}")
-    except Exception:
-        pass
-
-    # Get OS environment variable COVERAGE_PERCENTAGE if it exists
-    coverage_percentage = None
-    try:
-        coverage_percentage = os.environ["COVERAGE_PERCENTAGE"]
-        logger.info(f"Using COVERAGE_PERCENTAGE={coverage_percentage}")
-    except Exception:
-        pass
-
-    # Get OS environment variable COVERAGE_NUM if it exists
+    grace_mins = get_env_var("GRACE_MINS")
+    coverage_percentage = get_env_var("COVERAGE_PERCENTAGE")
     coverage_num = os.environ.get("COVERAGE_NUM")
-    logger.info(f"Using COVERAGE_NUM={coverage_num}")
 
-    # Get OS environment variable K_OFFSETS_COUNTS if it exists
-    k_offsets_counts = None
-    try: 
-        k_offsets_counts = os.environ.get("K_OFFSETS_COUNTS")
-        logger.info(f"Using K_OFFSETS_COUNTS={k_offsets_counts}")
-    except Exception:
-        pass
+    k_offsets_counts = get_env_var("K_OFFSETS_COUNTS")
+    window_delta = get_env_var("WINDOW_DELTA")
 
     minutes = re.search(r"\d+", os.environ["MINUTES"]).group()
     query_start_datetime = query_end_datetime - relativedelta(minutes=int(minutes))
@@ -139,6 +109,7 @@ def _create_job(event: Dict):
         "k": f"--k={cslc_processing_k}" if cslc_processing_k else "",
         "m": f"--m={cslc_processing_m}" if cslc_processing_m else "",
         "k_offsets_counts": f"--k-offsets-counts={k_offsets_counts}" if k_offsets_counts else "",
+        "window_delta": f"--window-delta={window_delta}" if window_delta else "",
         "grace_mins": f"--grace-mins={grace_mins}" if grace_mins else "",
         "coverage_percentage": f"--coverage-percentage={coverage_percentage}" if coverage_percentage else "",
         "coverage_num": f"--coverage-num={coverage_num}" if coverage_num else "",
@@ -186,3 +157,14 @@ def get_temporal_start_datetime(query_end_datetime):
 
     logger.info(f'{temporal_start_datetime=}')
     return temporal_start_datetime
+
+
+def get_env_var(key):
+    """Retrieve a lambda environment variable, handling cases where variables are not applicable to the current lambda (i.e. KeyError), and logging the entry."""
+    val = None
+    try:
+        val = os.environ.get(key)
+        logger.info(f"Using {key}={val}")
+    except Exception:
+        pass
+    return val
