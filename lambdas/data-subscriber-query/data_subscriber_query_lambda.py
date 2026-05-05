@@ -4,7 +4,6 @@ import logging
 import os
 import re
 from datetime import datetime, timezone
-from distutils.util import strtobool
 from typing import Dict
 
 import dateutil.parser
@@ -18,6 +17,20 @@ logger.setLevel(logging.INFO)
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 JOB_NAME_DATETIME_FORMAT = "%Y%m%dT%H%M%S"
+
+
+def strtobool(val: str) -> bool:
+    """Convert a string truth value to True or False.
+
+    Inline replacement for distutils.util.strtobool, which was removed in
+    Python 3.12. Same accepted values, returns bool instead of int.
+    """
+    val = val.lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    if val in ("n", "no", "f", "false", "off", "0"):
+        return False
+    raise ValueError(f"invalid truth value {val!r}")
 
 logger.info("Loading Lambda function")
 

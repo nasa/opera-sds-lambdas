@@ -1,7 +1,6 @@
 import json
 import os
 import re
-from distutils.util import strtobool
 from typing import Dict
 import dateutil.parser
 from pathlib import PurePath
