@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 import dateutil.parser
@@ -72,7 +72,7 @@ def _create_job(event: Dict):
     job_type = os.environ["JOB_TYPE"]
     job_release = os.environ["JOB_RELEASE"]
 
-    job_name = f"data-subscriber-download-slc-ionosphere-timer-{datetime.utcnow().strftime(JOB_NAME_DATETIME_FORMAT)}_{query_start_datetime_offset_hours}"
+    job_name = f"data-subscriber-download-slc-ionosphere-timer-{datetime.now(timezone.utc).replace(tzinfo=None).strftime(JOB_NAME_DATETIME_FORMAT)}_{query_start_datetime_offset_hours}"
     job_spec = f"job-{job_type}:{job_release}"
     job_params = {
         "start_datetime": f"--start-date={query_start_datetime.strftime(DATETIME_ISO_8601_FORMAT)}",

@@ -18,7 +18,7 @@ echo "GIT_OAUTH_TOKEN: $GIT_OAUTH_TOKEN"
 TAG=$BRANCH
 echo "TAG: $TAG"
 
-source /home/hysdsops/verdi/bin/activate
+source /home/hysdsops/verdi-py3.12/bin/activate
 
 rm -rf ${WORKSPACE}/lambda_packages
 

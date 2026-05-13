@@ -11,7 +11,6 @@ import shutil
 
 import setuptools
 import setuptools.command.sdist
-import six
 
 WHEELHOUSE = "wheelhouse"
 DIST = "dist"
@@ -107,9 +106,8 @@ class Package(setuptools.Command):
                                                 stderr=sys.stderr, cwd=cwd)
         except subprocess.CalledProcessError as e:
             return_code = e.returncode
-            six.raise_from(IOError(
-                "Shell commmand `%s` failed with return code %d." % (
-                    command, return_code)), e)
+            raise IOError("Shell commmand `%s` failed with return code %d." % (
+                    command, return_code)) from e
 
         return return_code
 

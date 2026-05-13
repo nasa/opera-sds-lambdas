@@ -1,10 +1,9 @@
-from __future__ import print_function
 
 import os
 import json
 import requests
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -71,7 +70,7 @@ def lambda_handler(event, context):
     job_spec = "job-%s:%s" % (job_type, job_release)
     job_params = {
         "dataset_type": dataset_type,
-        "creation_time": datetime.utcnow().strftime(DATETIME_FORMAT),
+        "creation_time": datetime.now(timezone.utc).replace(tzinfo=None).strftime(DATETIME_FORMAT),
         "notify_arn": os.environ["NOTIFY_ARN"]
     }
     tags = ["timer-{}".format(dataset_type)]

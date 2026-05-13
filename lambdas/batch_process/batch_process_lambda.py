@@ -1,8 +1,6 @@
-from __future__ import print_function
 import json
 import os
 import re
-from distutils.util import strtobool
 from typing import Dict
 import dateutil.parser
 from pathlib import PurePath
@@ -263,7 +261,7 @@ def batch_proc_once():
         if p.enabled == False:
             continue
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         new_last_run_date = datetime.strptime(p.last_run_date, ES_DATETIME_FORMAT) + timedelta(
             minutes=p.run_interval_mins)
 
