@@ -1,5 +1,5 @@
 aws-lambda-powertools==2.43.1
-requests==2.32.4
+requests==2.33.0
 python-dateutil==2.9.0.post0
 
 # urllib3 contains an incompatible change. pinning such that we stay on urllib3 1.x
