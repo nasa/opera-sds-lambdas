@@ -61,3 +61,11 @@ popd
 pushd ${WORKSPACE}/lambdas/batch_process
 python setup.py package --version ${TAG} --workspace workspace --lambda-func batch_process_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
+
+pushd ${WORKSPACE}/lambdas/grq-on-demand
+python setup.py package --version ${TAG} --workspace workspace --lambda-func grq_on_demand_lambda.py --package-dir ${WORKSPACE}/lambda_packages
+popd
+
+pushd ${WORKSPACE}/lambdas/catalog-ingest
+python setup.py package --version ${TAG} --workspace workspace --lambda-func catalog_ingest_lambda.py --package-dir ${WORKSPACE}/lambda_packages
+popd
