@@ -42,8 +42,8 @@ def submit_job(
     query_start_dt = query_end_dt - relativedelta(minutes=minutes)
 
     # *_PARAM = param name in HySDS IO, *_PARAM_PREFIX useful if param values are CLI parameters (eg. --start-date=)
-    job_params[os.getenv('START_PARAM'), 'start_date'] = f'{os.getenv('START_PARAM_PREFIX', '')}{query_start_dt.strftime(DATETIME_FORMAT)}'
-    job_params[os.getenv('END_PARAM'), 'end_date'] = f'{os.getenv('END_PARAM_PREFIX', '')}{query_end_dt.strftime(DATETIME_FORMAT)}'
+    job_params[os.getenv('START_PARAM', 'start_date')] = f'{os.getenv('START_PARAM_PREFIX', '')}{query_start_dt.strftime(DATETIME_FORMAT)}'
+    job_params[os.getenv('END_PARAM', 'end_date')] = f'{os.getenv('END_PARAM_PREFIX', '')}{query_end_dt.strftime(DATETIME_FORMAT)}'
 
     job_params.update(extra_params)
 
