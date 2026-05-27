@@ -50,17 +50,21 @@ def submit_job(
     payload = {
         'queue': job_queue,
         "priority": priority,
-        'tags': tags,
+        'tags': json.dumps([tags]),
         'type': f'job-{job_type}:{job_release}',
         'params': json.dumps(job_params),
         'name': f'catalog-ingest-timer-{job_type}-{datetime.now(timezone.utc).replace(tzinfo=None).strftime(JOB_NAME_DATETIME_FORMAT)}_{minutes}',
-        'enable_dedup': dedup
     }
 
     logger.info(f'Mozart payload: {json.dumps(payload)}')
     logger.info(f'Submitting job to {mozart_url}')
 
-    resp = requests.post(mozart_url, json=payload, headers={'Content-Type': 'application/json'}, verify=False)
+    resp = requests.post(
+        mozart_url,
+        data=payload,
+        params=dict(enable_dedup=dedup),
+        verify=False
+    )
 
     logger.info(f"Request code: {resp.status_code}")
     logger.info(f"Request text: {resp.text}")
