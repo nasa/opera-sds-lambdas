@@ -60,9 +60,9 @@ DELETE_SCROLLS = False
 
 
 def get_time_range(start_days_back=0, range_size=1):
-    start_date = (datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) -
-                  timedelta(days=start_days_back))
-    return start_date - timedelta(days=range_size), start_date
+    end_date = (datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) -
+                timedelta(days=start_days_back))
+    return end_date - timedelta(days=range_size), end_date
 
 
 def get_grq_client(host) -> opensearchpy.OpenSearch:
@@ -287,17 +287,28 @@ def report(accountability, start: datetime, end: datetime, venue, debug=False):
 
 
 def lambda_handler(event, context):
+    ses = boto3.client('sesv2')
+
     grq_url = os.environ['GRQ_URL']
     venue = os.environ['VENUE']
 
-    grq = get_grq_client(grq_url)
-    assert grq.ping(), f'Cannot reach GRQ cluster at {grq_url}'
+    sender = os.environ['REPORT_SENDER_EMAIL']
 
-    start_days_back = int(os.getenv('WINDOW_START_DAYS_BACK', -1))
+    recipients = os.environ['REPORT_RECIPIENT_EMAILS']
+    cc = os.getenv('REPORT_CC_EMAILS', None)
+    bcc = os.getenv('REPORT_BCC_EMAILS', None)
+
+    start_days_back = int(os.getenv('WINDOW_END_DAYS_BACK', -1))
     range_size = int(os.getenv('WINDOW_SIZE_IN_DAYS', 1))
 
-    assert start_days_back >= 0
-    assert range_size >= 1
+    if start_days_back < 0:
+        raise ValueError(f'WINDOW_END_DAYS_BACK must be >= 0, got {start_days_back}')
+    if range_size < 1:
+        raise ValueError(f'WINDOW_SIZE_IN_DAYS must be >= 1, got {range_size}')
+
+    grq = get_grq_client(grq_url)
+    if not grq.ping():
+        raise RuntimeError(f'Cannot reach GRQ cluster at {grq_url}')
 
     start, end = get_time_range(start_days_back, range_size)
 
@@ -305,14 +316,6 @@ def lambda_handler(event, context):
                           for product_type, pattern in PRODUCT_INDEX_MAP.items()}
 
     plaintext_report, html_report, json_bytes, report_title = report(cnn_accountability, start, end, venue)
-
-    ses = boto3.client('sesv2')
-
-    sender = os.environ['REPORT_SENDER_EMAIL']
-
-    recipients = os.environ['REPORT_RECIPIENT_EMAILS']
-    cc = os.getenv('REPORT_CC_EMAILS', None)
-    bcc = os.getenv('REPORT_BCC_EMAILS', None)
 
     dst = {
         'ToAddresses': [ea.strip() for ea in recipients.split(',')]
