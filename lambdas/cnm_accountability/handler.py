@@ -55,7 +55,7 @@ COL_NAME_MAP = {
 
 TIME_FMT = '%Y-%m-%dT%H:%M:%SZ'
 
-DELETE_SCROLLS = True
+DELETE_SCROLLS = False
 """Delete ElasticSearch scroll contexts when finished, or just let them expire"""
 
 
