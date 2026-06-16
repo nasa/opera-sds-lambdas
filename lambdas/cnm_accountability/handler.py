@@ -4,16 +4,20 @@ import os
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 
+import boto3
 import opensearchpy
 from opensearchpy.helpers import scan
 from tabulate import tabulate
 
 import queries as q
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s::%(lineno)d] %(message)s'
-)
+if len(logging.getLogger().handlers) > 0:
+    logging.getLogger().setLevel(logging.INFO)
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] [%(name)s::%(lineno)d] %(message)s'
+    )
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -51,6 +55,9 @@ COL_NAME_MAP = {
 
 TIME_FMT = '%Y-%m-%dT%H:%M:%SZ'
 
+DELETE_SCROLLS = True
+"""Delete ElasticSearch scroll contexts when finished, or just let them expire"""
+
 
 def get_time_range(start_days_back=0, range_size=1):
     start_date = (datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) -
@@ -80,7 +87,8 @@ def query_for_ids(client, index_pattern, query, transform=None):
     if transform is None:
         transform = id_from_doc
 
-    return [transform(doc['_source']) for doc in scan(client, query, index=index_pattern, size=10_000)]
+    return [transform(doc['_source']) for doc in scan(client, query, index=index_pattern,
+                                                      size=10_000, clear_scroll=DELETE_SCROLLS)]
 
 
 def get_cnm_accountability_for_product(client: opensearchpy.OpenSearch, index_pattern: str,
@@ -108,7 +116,7 @@ def get_cnm_accountability_for_product(client: opensearchpy.OpenSearch, index_pa
     }
 
 
-def report(accountability, start: datetime, end: datetime, venue):
+def report(accountability, start: datetime, end: datetime, venue, debug=False):
     # Map product type -> {count type -> count}
     counts = {
         product_type: {
@@ -184,8 +192,9 @@ def report(accountability, start: datetime, end: datetime, venue):
 
     json_report_data = json.dumps(accountability, indent=2).encode('utf-8')
 
-    with open('test.json', 'w') as f:
-        json.dump(accountability, f, indent=2)
+    if debug:
+        with open('test.json', 'w') as f:
+            json.dump(accountability, f, indent=2)
 
     # Transform the counts dict into a structure more suitable to rendering the report HTML template
     html_report_rows = []
@@ -268,17 +277,18 @@ def report(accountability, start: datetime, end: datetime, venue):
             'ingestion_failures': html_ingestion_failures,
         })
 
-        with open('test_render.html', 'w') as f:
-            f.write(html_report_str)
+        if debug:
+            with open('test_render.html', 'w') as f:
+                f.write(html_report_str)
     except Exception as e:
         print(e)
 
-    return txt_report.getvalue(), html_report_str, json_report_data
+    return txt_report.getvalue(), html_report_str, json_report_data, report_title
 
 
 def lambda_handler(event, context):
     grq_url = os.environ['GRQ_URL']
-    venue = os.environ['venue']
+    venue = os.environ['VENUE']
 
     grq = get_grq_client(grq_url)
     assert grq.ping(), f'Cannot reach GRQ cluster at {grq_url}'
@@ -294,7 +304,59 @@ def lambda_handler(event, context):
     cnn_accountability = {product_type: get_cnm_accountability_for_product(grq, pattern, start, end)
                           for product_type, pattern in PRODUCT_INDEX_MAP.items()}
 
-    plaintext_report, html_report, json_bytes = report(cnn_accountability, start, end, venue)
+    plaintext_report, html_report, json_bytes, report_title = report(cnn_accountability, start, end, venue)
+
+    ses = boto3.client('sesv2')
+
+    sender = os.environ['REPORT_SENDER_EMAIL']
+
+    recipients = os.environ['REPORT_RECIPIENT_EMAILS']
+    cc = os.getenv('REPORT_CC_EMAILS', None)
+    bcc = os.getenv('REPORT_BCC_EMAILS', None)
+
+    dst = {
+        'ToAddresses': [ea.strip() for ea in recipients.split(',')]
+    }
+
+    if cc:
+        dst['CcAddresses'] = [ea.strip() for ea in cc.split(',')]
+    if bcc:
+        dst['BccAddresses'] = [ea.strip() for ea in bcc.split(',')]
+
+    try:
+        resp = ses.send_email(
+            FromEmailAddress=sender,
+            Destination=dst,
+            ReplyToAddresses=[sender],
+            Content={
+                'Simple': {
+                    'Subject': {
+                        'Data': report_title,
+                    },
+                    'Body': {
+                        'Text': {
+                            'Data': plaintext_report
+                        },
+                        'Html': {
+                            'Data': html_report,
+                        }
+                    },
+                    'Attachments': [
+                        {
+                            'RawContent': json_bytes,
+                            'ContentDisposition': 'ATTACHMENT',
+                            'FileName': 'report.json',
+                            'ContentType': 'application/json',
+                        }
+                    ]
+                }
+            }
+        )
+
+        return resp
+    except Exception as e:
+        logger.critical(e)
+        raise e
 
 
 def main_dev():
@@ -321,7 +383,7 @@ def main_dev():
     with open('acc_with_failures.json') as fp:
         cnn_accountability = json.load(fp)
 
-    report(cnn_accountability, start, end, venue)
+    report(cnn_accountability, start, end, venue, debug=True)
 
 
 if __name__ == '__main__':
