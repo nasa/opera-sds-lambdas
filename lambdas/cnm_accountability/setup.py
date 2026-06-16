@@ -177,7 +177,9 @@ class Package(setuptools.Command):
         self.execute(
             "zip -9 {package_name} {files}".format(
                 package_name=lambda_package,
-                files=' '.join(glob.glob("lambda_function.py"))))
+                files=' '.join(
+                    glob.glob("lambda_function.py") + glob.glob("queries.py") + glob.glob("*.jinja2")
+                )))
         os.chdir(os.path.join(self.workspace, WHEELHOUSE))
         self.execute(
             "zip -rg ../{dist}/{archive_name}-{version}.zip "
