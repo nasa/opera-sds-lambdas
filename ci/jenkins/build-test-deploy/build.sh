@@ -61,3 +61,7 @@ popd
 pushd ${WORKSPACE}/lambdas/batch_process
 python setup.py package --version ${TAG} --workspace workspace --lambda-func batch_process_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
+
+pushd ${WORKSPACE}/lambdas/cnm_accountability
+python setup.py package --version ${TAG} --workspace workspace --lambda-func handler.py --package-dir ${WORKSPACE}/lambda_packages
+popd
