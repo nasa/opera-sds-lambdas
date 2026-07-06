@@ -69,3 +69,8 @@ popd
 pushd ${WORKSPACE}/lambdas/catalog-ingest
 python setup.py package --version ${TAG} --workspace workspace --lambda-func catalog_ingest_lambda.py --package-dir ${WORKSPACE}/lambda_packages
 popd
+
+pushd ${WORKSPACE}/lambdas/cnm_accountability
+python setup.py package --version ${TAG} --workspace workspace --lambda-func handler.py --package-dir ${WORKSPACE}/lambda_packages
+popd
+

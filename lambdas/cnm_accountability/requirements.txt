@@ -1,0 +1,6 @@
+aws-lambda-powertools
+boto3
+opensearch-py
+requests
+tabulate
+jinja2
