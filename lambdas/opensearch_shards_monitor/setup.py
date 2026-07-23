@@ -1,17 +1,16 @@
 """
-Copyright (c) 2019 Jet Propulsion Laboratory,
+Copyright (c) 2022 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
 import glob
 import os
 import shlex
+import shutil
 import subprocess
 import sys
-import shutil
 
 import setuptools
 import setuptools.command.sdist
-import six
 
 WHEELHOUSE = "wheelhouse"
 DIST = "dist"
@@ -107,9 +106,8 @@ class Package(setuptools.Command):
                                                 stderr=sys.stderr, cwd=cwd)
         except subprocess.CalledProcessError as e:
             return_code = e.returncode
-            six.raise_from(IOError(
-                "Shell commmand `%s` failed with return code %d." % (
-                    command, return_code)), e)
+            raise IOError("Shell commmand `%s` failed with return code %d." % (
+                    command, return_code)) from e
 
         return return_code
 
@@ -137,7 +135,7 @@ class Package(setuptools.Command):
         aws_lambda_file_path = os.path.join(dir, 'lambda_function.py')
 
         # Clear out the symbolic link if it exists
-        if os.path.exists(aws_lambda_file_path) and \
+        if os.path.exists(aws_lambda_file_path) or \
                 os.path.islink(aws_lambda_file_path):
             print("Unlinking existing symbolic link: {}".format(
                 aws_lambda_file_path))
