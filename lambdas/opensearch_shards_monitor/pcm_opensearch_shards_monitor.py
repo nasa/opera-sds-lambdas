@@ -21,6 +21,7 @@ print('Loading function')
 MOZART_ES_URL = os.environ['MOZART_ES_URL']
 CLOUDWATCH_METRIC_NAME = os.environ['CLOUDWATCH_METRIC_NAME']
 CLOUDWATCH_METRIC_NAMESPACE = os.environ['CLOUDWATCH_METRIC_NAMESPACE']
+CLUSTER_NAME = os.environ['CLUSTER_NAME']
 
 def lambda_handler(event, context):
     """
@@ -73,7 +74,13 @@ def lambda_handler(event, context):
                     {
                         "MetricName": CLOUDWATCH_METRIC_NAME,
                         "Value": shard_usage,
-                        "Unit": "Percent"
+                        "Unit": "Percent",
+                        "Dimensions": [
+                            {
+                                "Name": "Cluster",
+                                "Value": CLUSTER_NAME
+                            }
+                        ]
                     }
                 ]
             )
