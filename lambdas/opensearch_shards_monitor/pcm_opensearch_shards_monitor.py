@@ -68,9 +68,10 @@ def lambda_handler(event, context):
             print("shard usage: %0.2f" % shard_usage)
             # Now stream to cloudwatch metrics
             cw_client = boto3.client("cloudwatch")
-            response = cw_client.put_metric_data(
-                Namespace=CLOUDWATCH_METRIC_NAMESPACE,
-                MetricData=[
+
+            metrics_data = {
+                'Namespace': CLOUDWATCH_METRIC_NAMESPACE,
+                'MetricData': [
                     {
                         "MetricName": CLOUDWATCH_METRIC_NAME,
                         "Value": shard_usage,
@@ -83,8 +84,16 @@ def lambda_handler(event, context):
                         ]
                     }
                 ]
-            )
+            }
+
+            print(f'Metrics data: {metrics_data}')
+            response = cw_client.put_metric_data(**metrics_data)
             print(f"Response from publishing cloudwatch metric: {response}")
+
+            return {
+                'MetricsData': metrics_data,
+                'CloudWatchResponse': response
+            }
         else:
             print(f"Cannot determine shards from request response: {results}")
     except Exception as e:
