@@ -74,3 +74,6 @@ pushd ${WORKSPACE}/lambdas/cnm_accountability
 python setup.py package --version ${TAG} --workspace workspace --lambda-func handler.py --package-dir ${WORKSPACE}/lambda_packages
 popd
 
+pushd ${WORKSPACE}/lambdas/opensearch_shards_monitor
+python setup.py package --version ${TAG} --workspace workspace --lambda-func pcm_opensearch_shards_monitor.py --package-dir ${WORKSPACE}/lambda_packages
+popd
