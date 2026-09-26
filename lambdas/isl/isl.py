@@ -1,6 +1,7 @@
 
 import os, sys, re, json, requests, boto3, base64
 from datetime import datetime, timezone
+from urllib.parse import unquote_plus
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -160,7 +161,8 @@ def lambda_handler(event, context):
         # parse signal and dataset files and urls
         bucket = s3_info["bucket"]["name"]
         # bucket = event['Records'][0]['s3']['bucket']['name']
-        trigger_file = s3_info["object"]["key"]
+        # S3 notification keys use application/x-www-form-urlencoded encoding.
+        trigger_file = unquote_plus(s3_info["object"]["key"])
         # trigger_file has the prefix to know what kind of file is being ingested.
         file_type = trigger_file[: trigger_file.find("/")]
         print("Trigger file: {}".format(trigger_file))
