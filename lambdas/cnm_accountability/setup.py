@@ -178,7 +178,10 @@ class Package(setuptools.Command):
             "zip -9 {package_name} {files}".format(
                 package_name=lambda_package,
                 files=' '.join(
-                    glob.glob("lambda_function.py") + glob.glob("queries.py") + glob.glob("*.jinja2")
+                    glob.glob("lambda_function.py") +
+                    glob.glob("big_report_handler.py") +
+                    glob.glob("queries.py") +
+                    glob.glob("*.jinja2")
                 )))
         os.chdir(os.path.join(self.workspace, WHEELHOUSE))
         self.execute(
