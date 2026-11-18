@@ -33,7 +33,9 @@ CNM_SEND_FAILED = 'CNM_SEND_FAILED'
 CNM_NO_RESPONSE = 'CNM_NO_RESPONSE'
 CNM_INGEST_FAILED = 'CNM_INGEST_FAILED'
 
-ATTACHMENT_SIZE_THRESHOLD = 30 * (1024 ** 2)
+# If the gross size of non-inline attachments exceeds this, they are zipped. If the post-zip size of the non-inline
+# attachments exceeds this, the zip is pushed to S3
+ATTACHMENT_ZIP_THRESHOLD = 10 * (1024 ** 2)
 
 
 PRODUCT_ORDER = {p: i for i, p in enumerate([
@@ -648,29 +650,46 @@ def lambda_handler(event, context):
 
         logger.info(f'Attachments gross size: {attachment_size:,} bytes')
 
-        if attachment_size > ATTACHMENT_SIZE_THRESHOLD:
-            logger.warning(f'Gross attachment size over threshold of {ATTACHMENT_SIZE_THRESHOLD:,} bytes. Trying to zip.')
+        if attachment_size > ATTACHMENT_ZIP_THRESHOLD:
+            logger.warning(f'Gross attachment size over threshold of {ATTACHMENT_ZIP_THRESHOLD:,} bytes. Trying to zip.')
             buf = BytesIO()
 
-            with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zip_f:
+            with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_f:
                 for a in main_attachments:
                     zip_f.writestr(a['FileName'], a['RawContent'])
                     logger.info(f'Added {a["FileName"]}')
 
-            attachments = inline_attachments + [{
+            zip_attachment = {
                 'RawContent': buf.getvalue(),
                 'ContentType': 'application/zip',
                 'ContentDisposition': 'ATTACHMENT',
                 'FileName': 'supplementary_report_data.zip',
                 'ContentTransferEncoding': 'BASE64',
-            }]
+            }
 
-            new_attachments_size = sum([len(a['RawContent']) for a in attachments])
+            new_attachments_size = sum([len(a['RawContent']) for a in (inline_attachments + [zip_attachment])])
 
-            logger.info(f'Post-compression attachments gross size: {new_attachments_size:,} bytes')
+            logger.info(f'Post-compression attachments gross size: {new_attachments_size:,} bytes '
+                        f'(zip: {len(zip_attachment["RawContent"]):,} bytes)')
 
-            # if new_attachments_size > ATTACHMENT_SIZE_THRESHOLD:
-            #     raise RuntimeError('TODO: post-zip attachments still too big! TODO: push to S3 instead?')
+            if new_attachments_size <= ATTACHMENT_ZIP_THRESHOLD:
+                attachments = inline_attachments + [zip_attachment]
+            else:
+                logger.info(f'Attachments are still too large. Pushing non-inline attachments to S3.')
+
+                push_key = dataset_s3_prefix.rstrip('/') + '/supplementary_report_data.zip'
+                push_url = f's3://{dataset_s3_bucket}{push_key}'
+                s3.upload_fileobj(buf, dataset_s3_bucket, push_key)
+
+                push_attachment = {
+                    'RawContent': f'Supplementary data uploaded to S3 at {push_url}'.encode('utf-8'),
+                    'ContentType': 'text/plain',
+                    'ContentDisposition': 'ATTACHMENT',
+                    'FileName': 'supplementary_report_data.txt',
+                    'ContentTransferEncoding': 'BASE64',
+                }
+
+                attachments = inline_attachments + [push_attachment]
         else:
             attachments = main_attachments + inline_attachments
 
